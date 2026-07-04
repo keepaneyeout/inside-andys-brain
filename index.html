@@ -190,7 +190,8 @@ const DB_CONFIG = {
 };
 const STOPWORDS = new Set(("a an and are as at be but by did do does for from had has have he her him his how i in " +
   "into is it its me my not of on or our she so that the their them they this to was we were what when where which " +
-  "who why will with you your andy burnham").split(" "));
+  "who why will with you your andy burnham about said say says saying talk talked talking tell told mention " +
+  "mentioned think thinks thought ever everything anything something whats hes shes its dont didnt").split(" "));
 
 const $ = id => document.getElementById(id);
 const state = { offset: 0, limit: 20, total: 0, running: false, db: null };
@@ -224,8 +225,11 @@ function renderBody(md) {
 function showError(msg) { const e = $("err"); e.textContent = msg; e.style.display = "block"; }
 
 function simplify(q) {
-  const toks = (q.toLowerCase().match(/[a-z0-9*']+/g) || []).filter(t => !STOPWORDS.has(t));
-  return toks;
+  // Strip punctuation entirely (apostrophes break FTS5 syntax), drop noise
+  // words and single letters, so "what's he said about Everton?" becomes
+  // ["everton"].
+  return (q.toLowerCase().replace(/[''`]/g, "").match(/[a-z0-9*]+/g) || [])
+    .filter(t => t.length > 1 && !STOPWORDS.has(t));
 }
 function buildWhere() {
   const where = ["records_fts MATCH ?"], args = [null];
@@ -264,12 +268,14 @@ async function doQuery(q, limit, offset) {
   if (res.total === 0) {
     const keep = simplify(q);
     if (keep.length && keep.join(" ") !== q.toLowerCase()) {
-      searched = keep.join(" ");
-      res = await runSearch(searched, where, args, limit, offset);
-      if (res.total === 0 && keep.length > 1) {
-        searched = keep.join(" OR ");
+      try {
+        searched = keep.join(" ");
         res = await runSearch(searched, where, args, limit, offset);
-      }
+        if (res.total === 0 && keep.length > 1) {
+          searched = keep.join(" OR ");
+          res = await runSearch(searched, where, args, limit, offset);
+        }
+      } catch (e) { /* keep the zero-result response rather than failing */ }
     }
   }
   return { ...res, searched };
