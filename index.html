@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inside Andy's Brain</title>
+<meta name="description" content="Search everything Andy Burnham has said and voted on: Commons speeches, questions, every division vote, ministerial and mayoral statements, 2001 to 2026.">
+<style>
+  :root {
+    --ink: #23272d; --muted: #6b7280; --paper: #faf7f2; --card: #ffffff;
+    --line: #eae4da; --mark: #ffe9a8;
+    --grad: linear-gradient(120deg, #b91c3b 0%, #e8563f 55%, #f5a623 100%);
+    --q: #2563eb; --div: #7c3aed; --deb: #0d9488; --st: #ea580c;
+    --pet: #db2777; --hil: #b91c1c; --pdf: #475569; --prs: #b45309;
+    --aye: #15803d; --no: #b91c1c; --abs: #64748b; --both: #a16207;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink);
+         font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .banner { background: var(--grad); color: #fff; padding: 44px 20px 78px; text-align: center; }
+  .banner h1 { margin: 0; font-size: 40px; letter-spacing: -0.02em; text-shadow: 0 1px 3px rgba(0,0,0,.18); }
+  .banner h1 .brain { font-size: 44px; vertical-align: -4px; margin-right: 6px; }
+  .banner p.tag { margin: 10px auto 0; font-size: 16.5px; max-width: 560px; opacity: .95; }
+  .banner .stats { margin-top: 16px; font-size: 13px; display: flex; flex-wrap: wrap;
+                   gap: 7px 14px; justify-content: center; opacity: .95; }
+  .banner .stats span { background: rgba(255,255,255,.16); border-radius: 999px; padding: 3px 12px; }
+  .wrap { max-width: 860px; margin: -46px auto 0; padding: 0 20px 90px; }
+  .searchcard { background: var(--card); border-radius: 18px; padding: 18px;
+                box-shadow: 0 10px 30px rgba(120, 60, 20, .13); }
+  form.bar { display: flex; gap: 10px; }
+  input[type=search] { flex: 1; font-size: 17px; padding: 13px 16px; border: 2px solid var(--line);
+         border-radius: 12px; background: #fffdf9; outline: none; }
+  input[type=search]:focus { border-color: #e8563f; }
+  button.go { font-size: 16px; font-weight: 600; padding: 13px 26px; border: 0; border-radius: 12px;
+         background: var(--grad); color: #fff; cursor: pointer; }
+  button.go:hover { filter: brightness(1.06); }
+  button.go:disabled { filter: grayscale(.5); cursor: wait; }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .filters select, .filters input[type=date] { font-size: 13px; padding: 7px 9px; color: var(--ink);
+         border: 1.5px solid var(--line); border-radius: 9px; background: #fff; }
+  .chips { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { font-size: 13.5px; padding: 6px 14px; border-radius: 999px; cursor: pointer;
+          background: #fff; border: 1.5px solid; font-weight: 500; }
+  .chip:nth-child(6n+1) { color: var(--q);   border-color: #bfd3fa; }
+  .chip:nth-child(6n+2) { color: var(--div); border-color: #ddcdfb; }
+  .chip:nth-child(6n+3) { color: var(--deb); border-color: #b8e5e0; }
+  .chip:nth-child(6n+4) { color: var(--st);  border-color: #f8d0b8; }
+  .chip:nth-child(6n+5) { color: var(--pet); border-color: #f7c3dd; }
+  .chip:nth-child(6n+6) { color: var(--hil); border-color: #f3c0c0; }
+  .chip:hover { background: #fff6ec; }
+  .status { margin: 22px 4px 4px; color: var(--muted); font-size: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-left-width: 5px;
+          border-radius: 14px; padding: 16px 18px; margin: 12px 0;
+          box-shadow: 0 2px 10px rgba(120, 60, 20, .05); }
+  .card.f-question     { border-left-color: var(--q); }
+  .card.f-division     { border-left-color: var(--div); }
+  .card.f-debate       { border-left-color: var(--deb); }
+  .card.f-statement    { border-left-color: var(--st); }
+  .card.f-petition     { border-left-color: var(--pet); }
+  .card.f-hillsborough { border-left-color: var(--hil); }
+  .card.f-pdf-extract, .card.f-pdf-extract-index { border-left-color: var(--pdf); }
+  .card.f-press        { border-left-color: var(--prs); }
+  .meta { font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .pill { border-radius: 999px; padding: 2px 10px; font-weight: 600; }
+  .pill.fam-question     { background: #e4edfd; color: var(--q); }
+  .pill.fam-division     { background: #efe7fd; color: var(--div); }
+  .pill.fam-debate       { background: #dff4f2; color: var(--deb); }
+  .pill.fam-statement    { background: #fdeadd; color: var(--st); }
+  .pill.fam-petition     { background: #fce4f0; color: var(--pet); }
+  .pill.fam-hillsborough { background: #fbe3e3; color: var(--hil); }
+  .pill.fam-pdf-extract, .pill.fam-pdf-extract-index { background: #e8ecf1; color: var(--pdf); }
+  .pill.fam-press        { background: #fdf0dd; color: var(--prs); }
+  .pill.voice-contextual { background: #f1f2f4; color: var(--muted); font-weight: 500; }
+  .pill.voice-direct { background: #e5f5eb; color: var(--aye); font-weight: 500; }
+  .pill.vote-aye { background: var(--aye); color: #fff; }
+  .pill.vote-no { background: var(--no); color: #fff; }
+  .pill.vote-absent { background: var(--abs); color: #fff; }
+  .pill.vote-both, .pill.vote-tellaye, .pill.vote-tellno { background: var(--both); color: #fff; }
+  .card h3 { margin: 8px 0 6px; font-size: 17.5px; line-height: 1.35; }
+  .snip { margin: 0; font-size: 14.5px; color: #40464d; }
+  mark { background: var(--mark); padding: 0 2px; border-radius: 3px; }
+  .actions { margin-top: 11px; display: flex; gap: 16px; font-size: 13.5px; }
+  .actions a, .actions button { color: #c0264b; font-weight: 600; text-decoration: none;
+          border: 0; background: none; font-size: 13.5px; cursor: pointer; padding: 0; }
+  .actions a:hover, .actions button:hover { text-decoration: underline; }
+  .full { margin-top: 12px; border-top: 1px dashed var(--line); padding-top: 12px;
+          font-size: 14.5px; color: #33383f; }
+  .full h4 { margin: 12px 0 6px; font-size: 15px; }
+  .full p { margin: 0 0 10px; white-space: pre-wrap; }
+  .full .prov { color: var(--muted); font-size: 12.5px; }
+  .more { display: block; margin: 20px auto 0; font-size: 14.5px; font-weight: 600; padding: 11px 28px;
+          border: 2px solid #f0c9a8; border-radius: 999px; background: #fff; color: #c0264b; cursor: pointer; }
+  .more:hover { background: #fff6ec; }
+  footer { margin-top: 40px; color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--line);
+          padding-top: 14px; text-align: center; }
+  .err { background: #fbe3e3; border: 1px solid #f3c0c0; color: #7f1d1d; border-radius: 10px;
+         padding: 10px 14px; margin-top: 16px; font-size: 13.5px; display: none; }
+  @media (max-width: 560px) {
+    .banner h1 { font-size: 30px; }
+    form.bar { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<div class="banner">
+  <h1><span class="brain">🧠</span>Inside Andy's Brain</h1>
+  <p class="tag">Search everything Andy Burnham has said and voted on: every Commons speech, question and division, ministerial speeches, mayoral statements and the documents behind his campaigns.</p>
+  <div class="stats" id="stats"></div>
+</div>
+
+<div class="wrap">
+  <div class="searchcard">
+    <form class="bar" id="form">
+      <input type="search" id="q" placeholder="Waking the brain, one moment..." disabled autofocus>
+      <button class="go" type="submit" id="gobtn" disabled>Search</button>
+    </form>
+    <div class="filters">
+      <select id="family">
+        <option value="">All record types</option>
+        <option value="question">Questions</option>
+        <option value="division">Division votes</option>
+        <option value="debate">Debates</option>
+        <option value="statement">Statements and press releases</option>
+        <option value="petition">Petitions</option>
+        <option value="hillsborough">Hillsborough records</option>
+        <option value="pdf-extract">Report extracts</option>
+        <option value="press">Press coverage</option>
+      </select>
+      <select id="voice">
+        <option value="">His words and context</option>
+        <option value="direct">Only Burnham speaking or voting</option>
+        <option value="contextual">Only contextual documents</option>
+      </select>
+      <select id="vote">
+        <option value="">Any vote</option>
+        <option value="aye">Voted aye</option>
+        <option value="no">Voted no</option>
+        <option value="absent">Did not vote</option>
+        <option value="both">Both lobbies</option>
+      </select>
+      <input type="date" id="from" title="From date">
+      <input type="date" id="to" title="To date">
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="err" id="err"></div>
+  </div>
+
+  <div class="status" id="status"></div>
+  <div id="results"></div>
+  <button class="more" id="more" hidden>Load more</button>
+
+  <footer>
+    Public sources only: Hansard via TheyWorkForYou, Public Whip division data, gov.uk and the UK Government
+    Web Archive, GMCA press, curated press records (summary and link only) and extracted government reports.
+    Every result links to its source. Contextual documents are material about his campaigns, not his words.
+    Data snapshot: 4 July 2026. Search runs in your browser; only the slices of the database a query needs are downloaded.
+  </footer>
+</div>
+
+<script type="module">
+"use strict";
+import { createDbWorker } from "./sqljs-httpvfs.esm.js";
+
+const STATS = {"total": 12345, "families": [{"family": "question", "count": 4870}, {"family": "division", "count": 4227}, {"family": "debate", "count": 2607}, {"family": "statement", "count": 577}, {"family": "hillsborough", "count": 19}, {"family": "petition", "count": 19}, {"family": "pdf-extract", "count": 10}, {"family": "press", "count": 10}, {"family": "pdf-extract-index", "count": 6}], "from": "2001-06-22", "to": "2026-06-29"};
+const DB_CONFIG = {
+  from: "inline",
+  config: {
+    serverMode: "chunked",
+    requestChunkSize: 4096,
+    databaseLengthBytes: 51113984,
+    serverChunkSize: 9437184,
+    urlPrefix: "index.sqlite.",
+    suffixLength: 3
+  }
+};
+const STOPWORDS = new Set(("a an and are as at be but by did do does for from had has have he her him his how i in " +
+  "into is it its me my not of on or our she so that the their them they this to was we were what when where which " +
+  "who why will with you your andy burnham").split(" "));
+
+const $ = id => document.getElementById(id);
+const state = { offset: 0, limit: 20, total: 0, running: false, db: null };
+
+const EXAMPLES = [
+  { label: "How did he vote on Iraq?", q: "Iraq", family: "division" },
+  { label: "Hillsborough disclosure", q: "Hillsborough disclosure" },
+  { label: "What he said about buses", q: "bus franchising" },
+  { label: "National Care Service", q: "\"National Care Service\"" },
+  { label: "The leadership bid", q: "leadership", family: "press" },
+  { label: "Votes he missed on Europe", q: "European Union", family: "division", vote: "absent" }
+];
+
+function esc(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function markup(snip) {
+  return esc(snip).split("[[[").join("<mark>").split("]]]").join("</mark>");
+}
+function renderBody(md) {
+  const out = [];
+  for (const block of String(md).split(/\n\s*\n/)) {
+    const t = block.trim();
+    if (!t) continue;
+    if (t.startsWith("#")) out.push("<h4>" + esc(t.replace(/^#+\s*/, "")) + "</h4>");
+    else out.push("<p>" + esc(t) + "</p>");
+  }
+  return out.join("");
+}
+function showError(msg) { const e = $("err"); e.textContent = msg; e.style.display = "block"; }
+
+function simplify(q) {
+  const toks = (q.toLowerCase().match(/[a-z0-9*']+/g) || []).filter(t => !STOPWORDS.has(t));
+  return toks;
+}
+function buildWhere() {
+  const where = ["records_fts MATCH ?"], args = [null];
+  const f = $("family").value, v = $("voice").value, vo = $("vote").value;
+  if (f) { where.push("r.family = ?"); args.push(f); }
+  if (v) { where.push("r.voice = ?"); args.push(v); }
+  if (vo) { where.push("r.vote = ?"); args.push(vo); }
+  if ($("from").value) { where.push("r.date >= ?"); args.push($("from").value); }
+  if ($("to").value) { where.push("r.date <= ?"); args.push($("to").value); }
+  return { where: where.join(" AND "), args };
+}
+async function runSearch(matchExpr, where, args, limit, offset) {
+  const a = args.slice(); a[0] = matchExpr;
+  const countRows = await state.db.query(
+    `SELECT COUNT(*) AS n FROM records_fts JOIN records r ON r.id = records_fts.rowid WHERE ${where}`, a);
+  const total = countRows[0] ? countRows[0].n : 0;
+  let rows = [];
+  if (total > 0) {
+    rows = await state.db.query(
+      `SELECT r.date, r.family, r.voice, r.vote, r.title, r.path, r.url, r.alt_url,
+              snippet(records_fts, 1, '[[[', ']]]', ' ... ', 16) AS snip
+       FROM records_fts JOIN records r ON r.id = records_fts.rowid
+       WHERE ${where} ORDER BY bm25(records_fts) LIMIT ? OFFSET ?`, a.concat([limit, offset]));
+  }
+  return { total, rows };
+}
+async function doQuery(q, limit, offset) {
+  const { where, args } = buildWhere();
+  let searched = null, res;
+  try {
+    res = await runSearch(q, where, args, limit, offset);
+  } catch (e) {
+    searched = '"' + q.replace(/"/g, '""') + '"';
+    res = await runSearch(searched, where, args, limit, offset);
+  }
+  if (res.total === 0) {
+    const keep = simplify(q);
+    if (keep.length && keep.join(" ") !== q.toLowerCase()) {
+      searched = keep.join(" ");
+      res = await runSearch(searched, where, args, limit, offset);
+      if (res.total === 0 && keep.length > 1) {
+        searched = keep.join(" OR ");
+        res = await runSearch(searched, where, args, limit, offset);
+      }
+    }
+  }
+  return { ...res, searched };
+}
+
+function pills(r) {
+  let h = `<span>${esc(r.date)}</span>` +
+          `<span class="pill fam-${esc(r.family)}">${esc(r.family)}</span>` +
+          `<span class="pill voice-${esc(r.voice)}">${r.voice === "direct" ? "Burnham" : "context"}</span>`;
+  if (r.vote) h += `<span class="pill vote-${esc(r.vote)}">${esc(r.vote)}</span>`;
+  return h;
+}
+function card(r) {
+  const div = document.createElement("div");
+  div.className = "card f-" + String(r.family || "other");
+  div.innerHTML =
+    `<div class="meta">${pills(r)}</div>` +
+    `<h3>${esc(r.title)}</h3>` +
+    `<p class="snip">${markup(r.snip)}</p>` +
+    `<div class="actions">` +
+      (r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">Source</a>` : "") +
+      (r.alt_url ? `<a href="${esc(r.alt_url)}" target="_blank" rel="noopener">Archive</a>` : "") +
+      `<button type="button" class="expand">Full record</button>` +
+    `</div><div class="full" hidden></div>`;
+  div.querySelector(".expand").addEventListener("click", async ev => {
+    const full = div.querySelector(".full");
+    if (!full.hidden) { full.hidden = true; ev.target.textContent = "Full record"; return; }
+    if (!full.dataset.loaded) {
+      full.innerHTML = "<p>Loading…</p>"; full.hidden = false;
+      try {
+        const rec = await state.db.query("SELECT body, path FROM records WHERE path = ?", [r.path]);
+        full.innerHTML = rec[0]
+          ? renderBody(rec[0].body) + `<p class="prov">Vault record: ${esc(rec[0].path)}</p>`
+          : "<p>Record not found.</p>";
+        full.dataset.loaded = "1";
+      } catch (e) { full.innerHTML = "<p>Could not load the record.</p>"; }
+    }
+    full.hidden = false; ev.target.textContent = "Hide full record";
+  });
+  return div;
+}
+
+async function search(reset) {
+  const q = $("q").value.trim();
+  if (!q || state.running || !state.db) return;
+  state.running = true; $("gobtn").disabled = true;
+  if (reset) { state.offset = 0; $("results").innerHTML = ""; $("more").hidden = true; }
+  $("status").textContent = "Rummaging through the brain…";
+  try {
+    const data = await doQuery(q, state.limit, state.offset);
+    state.total = data.total;
+    for (const r of data.rows) $("results").appendChild(card(r));
+    const shown = $("results").children.length;
+    const interpreted = data.searched ? ` (interpreted as: ${data.searched})` : "";
+    $("status").textContent = data.total
+      ? `${data.total.toLocaleString("en-GB")} result${data.total === 1 ? "" : "s"} for ${q}${interpreted}, showing ${shown}`
+      : `No results for ${q}. Try key words only, a prefix* or different filters.`;
+    $("more").hidden = shown >= data.total;
+    state.offset = shown;
+  } catch (e) {
+    $("status").textContent = "";
+    showError("Search failed: " + (e && e.message ? e.message : e));
+  } finally {
+    state.running = false; $("gobtn").disabled = false;
+  }
+}
+
+$("form").addEventListener("submit", ev => { ev.preventDefault(); search(true); });
+$("more").addEventListener("click", () => search(false));
+for (const id of ["family", "voice", "vote", "from", "to"])
+  $(id).addEventListener("change", () => { if ($("q").value.trim()) search(true); });
+
+const chips = $("chips");
+for (const ex of EXAMPLES) {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "chip"; b.textContent = ex.label;
+  b.addEventListener("click", () => {
+    $("q").value = ex.q;
+    $("family").value = ex.family || "";
+    $("vote").value = ex.vote || "";
+    $("voice").value = ""; $("from").value = ""; $("to").value = "";
+    search(true);
+  });
+  chips.appendChild(b);
+}
+
+(function renderStats() {
+  const nice = { question: "questions", division: "division votes", debate: "debates",
+                 statement: "statements", petition: "petitions",
+                 hillsborough: "Hillsborough records", "pdf-extract": "report extracts",
+                 "pdf-extract-index": "report indexes", press: "press records" };
+  const spans = [`<span>${STATS.total.toLocaleString("en-GB")} records, ${STATS.from.slice(0,4)} to ${STATS.to.slice(0,4)}</span>`]
+    .concat(STATS.families.map(f => `<span>${f.count.toLocaleString("en-GB")} ${nice[f.family] || f.family}</span>`));
+  $("stats").innerHTML = spans.join("");
+})();
+
+(async function boot() {
+  try {
+    const worker = await createDbWorker([DB_CONFIG],
+      new URL("./sqlite.worker.js", import.meta.url).toString(),
+      new URL("./sql-wasm.wasm", import.meta.url).toString());
+    state.db = worker.db;
+    await state.db.query("SELECT 1");
+    $("q").disabled = false; $("gobtn").disabled = false;
+    $("q").placeholder = "Ask anything: how did he vote on Iraq? what did he say about buses?";
+    $("q").focus();
+  } catch (e) {
+    showError("The search engine could not start: " + (e && e.message ? e.message : e) +
+      ". Try a hard refresh (Cmd+Shift+R); if it persists, the host may not support range requests.");
+  }
+})();
+</script>
+</body>
+</html>
