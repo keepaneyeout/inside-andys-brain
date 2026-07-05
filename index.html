@@ -197,7 +197,7 @@ const STOPWORDS = new Set(("a an and are as at be but by did do does for from ha
   "mentioned think thinks thought ever everything anything something whats hes shes its dont didnt").split(" "));
 
 const $ = id => document.getElementById(id);
-const state = { offset: 0, limit: 20, total: 0, running: false, db: null };
+const state = { offset: 0, limit: 20, total: 0, running: false, db: null, autoFamily: false };
 
 const EXAMPLES = [
   { label: "How did he vote on Iraq?", q: "Iraq", family: "division" },
@@ -363,6 +363,9 @@ async function search(reset) {
   if (reset) { state.offset = 0; state.lastQuery = null; $("results").innerHTML = ""; $("more").hidden = true; }
   $("status").textContent = "Rummaging through the brain…";
   try {
+    // A filter the machine set clears itself on the next fresh search;
+    // filters a person chose by hand are left alone.
+    if (reset && state.autoFamily) { $("family").value = ""; state.autoFamily = false; }
     // Vote-intent shortcut: a question about how he voted switches to the
     // division view and matches the topic loosely, because bill titles are
     // terse ("Hunting Bill" never says fox).
@@ -378,9 +381,10 @@ async function search(reset) {
           state.total = probe.total;
           for (const r of probe.rows) $("results").appendChild(card(r));
           const shown = $("results").children.length;
+          state.autoFamily = true;
           $("status").textContent =
             `${probe.total.toLocaleString("en-GB")} of his votes match ${topic.join(" ")}, showing ${shown}. ` +
-            `Filter set to division votes; change it to search everything.`;
+            `Showing division votes for this question; your next search covers everything again.`;
           $("more").hidden = shown >= probe.total;
           state.offset = shown; state.lastQuery = loose;
           return;
@@ -411,7 +415,10 @@ async function search(reset) {
 $("form").addEventListener("submit", ev => { ev.preventDefault(); search(true); });
 $("more").addEventListener("click", () => search(false));
 for (const id of ["family", "voice", "vote", "from", "to"])
-  $(id).addEventListener("change", () => { if ($("q").value.trim()) search(true); });
+  $(id).addEventListener("change", () => {
+    if (id === "family") state.autoFamily = false;
+    if ($("q").value.trim()) search(true);
+  });
 
 const chips = $("chips");
 for (const ex of EXAMPLES) {
