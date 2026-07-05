@@ -253,6 +253,29 @@ function buildWhere() {
   if ($("to").value) { where.push("r.date <= ?"); args.push($("to").value); }
   return { where: where.join(" AND "), args };
 }
+async function countFor(matchExpr, where, args) {
+  const a = args.slice(); a[0] = matchExpr;
+  try {
+    const r = await state.db.query(
+      `SELECT COUNT(*) AS n FROM records_fts JOIN records r ON r.id = records_fts.rowid WHERE ${where}`, a);
+    return r[0] ? r[0].n : 0;
+  } catch (e) { return 0; }
+}
+async function expandTokens(tokens, where, args) {
+  // Crack unknown compounds: "foxhunting" has no matches, but fox+hunting
+  // does, so try every split of a zero-hit token into two known words.
+  const out = [];
+  for (const t of tokens) {
+    if (t.length < 7 || await countFor(t, where, args) > 0) { out.push(t); continue; }
+    let split = null;
+    for (let i = 3; i <= t.length - 3 && !split; i++) {
+      const a = t.slice(0, i), b = t.slice(i);
+      if (await countFor(a + " " + b, where, args) > 0) split = [a, b];
+    }
+    out.push(...(split || [t]));
+  }
+  return out;
+}
 async function runSearch(matchExpr, where, args, limit, offset) {
   const a = args.slice(); a[0] = matchExpr;
   const countRows = await state.db.query(
@@ -278,9 +301,12 @@ async function doQuery(q, limit, offset) {
     res = await runSearch(searched, where, args, limit, offset);
   }
   if (res.total === 0) {
-    const keep = simplify(q);
-    if (keep.length && keep.join(" ") !== q.toLowerCase()) {
+    // Intent words never join the fallback hunt: "vote OR foxhunting" ranks
+    // junk on the word vote alone. Better honest empty than confident wrong.
+    let keep = simplify(q, VOTE_INTENT);
+    if (keep.length && (keep.join(" ") !== q.toLowerCase() || keep.some(t => t.length >= 7))) {
       try {
+        keep = await expandTokens(keep, where, args);
         searched = keep.join(" ");
         res = await runSearch(searched, where, args, limit, offset);
         if (res.total === 0 && keep.length > 1) {
@@ -341,9 +367,11 @@ async function search(reset) {
     // division view and matches the topic loosely, because bill titles are
     // terse ("Hunting Bill" never says fox).
     if (reset && !$("family").value) {
-      const topic = voteIntentTopic(q);
+      let topic = voteIntentTopic(q);
       if (topic) {
         $("family").value = "division";
+        const w = buildWhere();
+        topic = await expandTokens(topic, w.where, w.args);
         const loose = topic.join(" OR ");
         const probe = await doQuery(loose, state.limit, 0);
         if (probe.total > 0) {
