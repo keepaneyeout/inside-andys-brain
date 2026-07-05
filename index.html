@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Inside Andy's Brain</title>
 <meta name="description" content="Search everything Andy Burnham has said and voted on: Commons speeches, questions, every division vote, ministerial and mayoral statements, 2001 to 2026.">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="favicon.png">
+<meta property="og:title" content="Inside Andy's Brain">
+<meta property="og:description" content="Search everything Andy Burnham has said and voted on: 12,348 records, 2001 to 2026, every source linked.">
+<meta property="og:image" content="https://andyburnhamsbrain.com/og-image.png">
+<meta property="og:url" content="https://andyburnhamsbrain.com/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
 <style>
   :root {
     --ink: #23272d; --muted: #6b7280; --paper: #faf7f2; --card: #ffffff;
@@ -97,9 +105,21 @@
           padding-top: 14px; text-align: center; }
   .err { background: #fbe3e3; border: 1px solid #f3c0c0; color: #7f1d1d; border-radius: 10px;
          padding: 10px 14px; margin-top: 16px; font-size: 13.5px; display: none; }
+  .card.compact { padding: 9px 14px; }
+  .card.compact h3 { font-size: 14.5px; margin: 5px 0 0; }
+  .card.compact .actions { margin-top: 6px; }
   @media (max-width: 560px) {
     .banner h1 { font-size: 30px; }
     form.bar { flex-direction: column; }
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink: #e8e6e1; --muted: #a2a7ad; --paper: #151619; --card: #1f2125;
+            --line: #34363c; --mark: #5c4a12; }
+    input[type=search], .filters select, .filters input[type=date], .chip, .more { background: var(--card); color: var(--ink); }
+    .snip { color: #c6c9cd; }
+    .full { color: #d2d4d8; }
+    .actions a, .actions button, .more { color: #f0917a; }
+    mark { color: #ffe9a8; }
   }
 </style>
 </head>
@@ -329,11 +349,12 @@ function pills(r) {
 }
 function card(r) {
   const div = document.createElement("div");
-  div.className = "card f-" + String(r.family || "other");
+  const compact = r.family === "division";
+  div.className = "card f-" + String(r.family || "other") + (compact ? " compact" : "");
   div.innerHTML =
     `<div class="meta">${pills(r)}</div>` +
     `<h3>${esc(r.title)}</h3>` +
-    `<p class="snip">${markup(r.snip)}</p>` +
+    (compact ? "" : `<p class="snip">${markup(r.snip)}</p>`) +
     `<div class="actions">` +
       (r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">Source</a>` : "") +
       (r.alt_url ? `<a href="${esc(r.alt_url)}" target="_blank" rel="noopener">Archive</a>` : "") +
