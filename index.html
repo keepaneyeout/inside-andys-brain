@@ -227,12 +227,21 @@ function renderBody(md) {
 }
 function showError(msg) { const e = $("err"); e.textContent = msg; e.style.display = "block"; }
 
-function simplify(q) {
+const VOTE_INTENT = new Set(["vote", "voted", "votes", "voting"]);
+function simplify(q, alsoStrip) {
   // Strip punctuation entirely (apostrophes break FTS5 syntax), drop noise
   // words and single letters, so "what's he said about Everton?" becomes
   // ["everton"].
   return (q.toLowerCase().replace(/[''`]/g, "").match(/[a-z0-9*]+/g) || [])
-    .filter(t => t.length > 1 && !STOPWORDS.has(t));
+    .filter(t => t.length > 1 && !STOPWORDS.has(t) && !(alsoStrip && alsoStrip.has(t)));
+}
+function voteIntentTopic(q) {
+  // "how did he vote on fox hunting" -> ["fox", "hunting"]; null when the
+  // query has no vote word or nothing is left once it is stripped.
+  const toks = simplify(q);
+  if (!toks.some(t => VOTE_INTENT.has(t))) return null;
+  const topic = simplify(q, VOTE_INTENT);
+  return topic.length ? topic : null;
 }
 function buildWhere() {
   const where = ["records_fts MATCH ?"], args = [null];
@@ -325,10 +334,35 @@ async function search(reset) {
   const q = $("q").value.trim();
   if (!q || state.running || !state.db) return;
   state.running = true; $("gobtn").disabled = true;
-  if (reset) { state.offset = 0; $("results").innerHTML = ""; $("more").hidden = true; }
+  if (reset) { state.offset = 0; state.lastQuery = null; $("results").innerHTML = ""; $("more").hidden = true; }
   $("status").textContent = "Rummaging through the brain…";
   try {
-    const data = await doQuery(q, state.limit, state.offset);
+    // Vote-intent shortcut: a question about how he voted switches to the
+    // division view and matches the topic loosely, because bill titles are
+    // terse ("Hunting Bill" never says fox).
+    if (reset && !$("family").value) {
+      const topic = voteIntentTopic(q);
+      if (topic) {
+        $("family").value = "division";
+        const loose = topic.join(" OR ");
+        const probe = await doQuery(loose, state.limit, 0);
+        if (probe.total > 0) {
+          state.total = probe.total;
+          for (const r of probe.rows) $("results").appendChild(card(r));
+          const shown = $("results").children.length;
+          $("status").textContent =
+            `${probe.total.toLocaleString("en-GB")} of his votes match ${topic.join(" ")}, showing ${shown}. ` +
+            `Filter set to division votes; change it to search everything.`;
+          $("more").hidden = shown >= probe.total;
+          state.offset = shown; state.lastQuery = loose;
+          return;
+        }
+        $("family").value = "";
+      }
+    }
+    const effectiveQ = (!reset && state.lastQuery) ? state.lastQuery : q;
+    const data = await doQuery(effectiveQ, state.limit, state.offset);
+    if (reset) state.lastQuery = q;
     state.total = data.total;
     for (const r of data.rows) $("results").appendChild(card(r));
     const shown = $("results").children.length;
