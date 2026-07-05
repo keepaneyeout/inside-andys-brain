@@ -176,7 +176,7 @@
     Public sources only: Hansard via TheyWorkForYou, Public Whip division data, gov.uk and the UK Government
     Web Archive, GMCA press, curated press records (summary and link only) and extracted government reports.
     Every result links to its source. Contextual documents are material about his campaigns, not his words.
-    Data snapshot: 4 July 2026. Search runs in your browser; only the slices of the database a query needs are downloaded.
+    Data snapshot: 5 July 2026. Search runs in your browser; only the slices of the database a query needs are downloaded.
     <br><a href="about.html" style="color:#c0264b; font-weight:600;">About this site</a> — built by Tom Watson as part of a coding training project. Independent and unofficial.
   </footer>
 </div>
@@ -208,7 +208,7 @@ const DB_CONFIG = {
     requestChunkSize: 4096,
     databaseLengthBytes: 51228672,
     serverChunkSize: 9437184,
-    urlPrefix: "index.sqlite.",
+    urlPrefix: "index-24421a5c.sqlite.",
     suffixLength: 3
   }
 };
@@ -428,7 +428,10 @@ async function search(reset) {
     state.offset = shown;
   } catch (e) {
     $("status").textContent = "";
-    showError("Search failed: " + (e && e.message ? e.message : e));
+    const msg = String(e && e.message ? e.message : e);
+    showError(/malformed|corrupt/i.test(msg)
+      ? "The site's data was updated while this page was open, so your browser is mixing old and new pieces. Refresh the page (Cmd+Shift+R, or Ctrl+F5 on Windows) and search again."
+      : "Search failed: " + msg);
   } finally {
     state.running = false; $("gobtn").disabled = false;
   }
