@@ -200,15 +200,15 @@ const createDbWorker = httpvfsModule.createDbWorker
   || (httpvfsModule.default && httpvfsModule.default.createDbWorker)
   || httpvfsModule;
 
-const STATS = {"total": 14111, "families": [{"family": "question", "count": 4870}, {"family": "division", "count": 4227}, {"family": "debate", "count": 2607}, {"family": "press", "count": 1775}, {"family": "statement", "count": 577}, {"family": "hillsborough", "count": 19}, {"family": "petition", "count": 19}, {"family": "pdf-extract", "count": 10}, {"family": "pdf-extract-index", "count": 6}, {"family": "campaign", "count": 1}], "from": "2001-06-08", "to": "2026-07-09"};
+const STATS = {"total": 14174, "families": [{"family": "question", "count": 4870}, {"family": "division", "count": 4227}, {"family": "debate", "count": 2607}, {"family": "press", "count": 1775}, {"family": "statement", "count": 577}, {"family": "minutes", "count": 63}, {"family": "hillsborough", "count": 19}, {"family": "petition", "count": 19}, {"family": "pdf-extract", "count": 10}, {"family": "pdf-extract-index", "count": 6}, {"family": "campaign", "count": 1}], "from": "2001-06-08", "to": "2026-07-09"};
 const DB_CONFIG = {
   from: "inline",
   config: {
     serverMode: "chunked",
     requestChunkSize: 4096,
-    databaseLengthBytes: 55808000,
+    databaseLengthBytes: 58331136,
     serverChunkSize: 9437184,
-    urlPrefix: "index-f846adfe.sqlite.",
+    urlPrefix: "index-79d9915d.sqlite.",
     suffixLength: 3
   }
 };
