@@ -176,7 +176,7 @@
     Public sources only: Hansard via TheyWorkForYou, Public Whip division data, gov.uk and the UK Government
     Web Archive, GMCA press, curated press records (summary and link only) and extracted government reports.
     Every result links to its source. Contextual documents are material about his campaigns, not his words.
-    Data snapshot: 5 July 2026. Search runs in your browser; only the slices of the database a query needs are downloaded.
+    Data snapshot: 9 July 2026. Search runs in your browser; only the slices of the database a query needs are downloaded.
     <br><a href="about.html" style="color:#c0264b; font-weight:600;">About this site</a> — built by Tom Watson with Claude, Anthropic's AI assistant, as part of a coding training project. Independent and unofficial.
   </footer>
 </div>
@@ -200,15 +200,15 @@ const createDbWorker = httpvfsModule.createDbWorker
   || (httpvfsModule.default && httpvfsModule.default.createDbWorker)
   || httpvfsModule;
 
-const STATS = {"total": 12348, "families": [{"family": "question", "count": 4870}, {"family": "division", "count": 4227}, {"family": "debate", "count": 2607}, {"family": "statement", "count": 577}, {"family": "hillsborough", "count": 19}, {"family": "petition", "count": 19}, {"family": "press", "count": 12}, {"family": "pdf-extract", "count": 10}, {"family": "pdf-extract-index", "count": 6}, {"family": "campaign", "count": 1}], "from": "2001-06-22", "to": "2026-07-01"};
+const STATS = {"total": 14111, "families": [{"family": "question", "count": 4870}, {"family": "division", "count": 4227}, {"family": "debate", "count": 2607}, {"family": "press", "count": 1775}, {"family": "statement", "count": 577}, {"family": "hillsborough", "count": 19}, {"family": "petition", "count": 19}, {"family": "pdf-extract", "count": 10}, {"family": "pdf-extract-index", "count": 6}, {"family": "campaign", "count": 1}], "from": "2001-06-08", "to": "2026-07-09"};
 const DB_CONFIG = {
   from: "inline",
   config: {
     serverMode: "chunked",
     requestChunkSize: 4096,
-    databaseLengthBytes: 51228672,
+    databaseLengthBytes: 55808000,
     serverChunkSize: 9437184,
-    urlPrefix: "index-24421a5c.sqlite.",
+    urlPrefix: "index-f846adfe.sqlite.",
     suffixLength: 3
   }
 };
