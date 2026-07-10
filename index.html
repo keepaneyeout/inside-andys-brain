@@ -47,6 +47,14 @@
   .filters select, .filters input[type=date] { font-size: 13px; padding: 7px 9px; color: var(--ink);
          border: 1.5px solid var(--line); border-radius: 9px; background: #fff; }
   .chips { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .contents { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  .cbtn { flex: 1; min-width: 170px; background: var(--card); border: 1.5px solid var(--line);
+          border-radius: 14px; padding: 12px 16px; text-decoration: none; color: var(--ink);
+          font-weight: 600; font-size: 14.5px; box-shadow: 0 2px 10px rgba(120, 60, 20, .05); }
+  .cbtn span { display: block; font-weight: 400; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .cbtn.hot { background: var(--grad); color: #fff; border: 0; }
+  .cbtn.hot span { color: rgba(255,255,255,.88); }
+  .cbtn:hover { filter: brightness(1.04); }
   .chip { font-size: 13.5px; padding: 6px 14px; border-radius: 999px; cursor: pointer;
           background: #fff; border: 1.5px solid; font-weight: 500; }
   .chip:nth-child(6n+1) { color: var(--q);   border-color: #bfd3fa; }
@@ -167,6 +175,13 @@
     <div class="chips" id="chips"></div>
     <div class="err" id="err"></div>
   </div>
+
+  <!-- Contents. The Leadership Election button is temporary for the July 2026 contest; remove once it concludes. -->
+  <nav class="contents">
+    <a class="cbtn hot" href="nominations.html">Leadership Election<span>The nominations tracked, with MP quotes</span></a>
+    <a class="cbtn" href="about.html">About this site<span>Sources, licences and what this is</span></a>
+    <a class="cbtn" href="about.html#feedback">Feedback<span>Report an error or a gap</span></a>
+  </nav>
 
   <div class="status" id="status"></div>
   <div id="results"></div>
