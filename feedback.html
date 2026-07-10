@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Feedback — Inside Andy's Brain</title>
+<meta name="description" content="Spotted an error, a gap or a search that should have worked? Tell us.">
+<link rel="icon" type="image/png" href="favicon.png">
+<style>
+  :root { --ink:#23272d; --muted:#6b7280; --paper:#faf7f2; --card:#ffffff; --line:#eae4da;
+          --grad:linear-gradient(120deg,#b91c3b 0%,#e8563f 55%,#f5a623 100%); }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink);
+         font:16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .banner { background:var(--grad); color:#fff; padding:30px 20px; text-align:center; }
+  .banner h1 { margin:0; font-size:26px; }
+  .banner a { color:#ffe9c9; font-size:13.5px; text-decoration:none; }
+  .wrap { max-width:640px; margin:0 auto; padding:26px 20px 80px; }
+  p, li { font-size:15px; color:#33383f; }
+  a { color:#c0264b; }
+  form { background:var(--card); border:0.5px solid var(--line); border-radius:14px; padding:18px; margin-top:14px; }
+  label { display:block; font-size:14px; font-weight:600; margin:12px 0 4px; }
+  input[type=text], input[type=email], textarea { width:100%; font-size:15px; padding:10px 12px;
+        border:1.5px solid var(--line); border-radius:9px; background:#fffdf9; outline:none; font-family:inherit; }
+  input:focus, textarea:focus { border-color:#e8563f; }
+  textarea { min-height:140px; resize:vertical; }
+  button { margin-top:16px; font-size:15.5px; font-weight:600; padding:11px 26px; border:0; border-radius:11px;
+           background:var(--grad); color:#fff; cursor:pointer; }
+  button:hover { filter:brightness(1.06); }
+  .note { font-size:12.5px; color:var(--muted); margin-top:10px; }
+  .ok { display:none; background:#e5f5eb; border:1px solid #bfe3cd; color:#14532d; border-radius:10px;
+        padding:12px 15px; margin-top:14px; font-size:14.5px; }
+  footer { margin-top:40px; color:var(--muted); font-size:12.5px; border-top:1px solid var(--line); padding-top:14px; text-align:center; }
+</style>
+</head>
+<body>
+<div class="banner">
+  <h1>Feedback</h1>
+  <a href="./">← Back to the search</a>
+</div>
+<div class="wrap">
+  <p>Spotted an error in a record, a gap in the archive, or a search that should have worked but did not? That is exactly what this project needs to hear. The exact words you typed into the search box are the most useful thing you can send.</p>
+  <p>This is an archive of the public record rather than a place for political comment, so feedback about the site is more useful than feedback about its subject.</p>
+
+  <form id="fbform" action="https://formspree.io/f/mwvdgooa" method="POST">
+    <label for="name">Name</label>
+    <input type="text" id="name" name="name" required>
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email" required>
+    <label for="message">Your thoughts</label>
+    <textarea id="message" name="message" required placeholder="What did you search for, what did you expect, what happened?"></textarea>
+    <button type="submit">Send</button>
+    <p class="note">Your message and email go straight to the site's maintainer so we can reply, and are used for nothing else. Prefer GitHub? Corrections can also be raised as <a href="https://github.com/keepaneyeout/inside-andys-brain/issues">issues</a>.</p>
+  </form>
+  <div class="ok" id="ok">Thank you. Your message has been sent.</div>
+
+  <footer>Part of <a href="./">Inside Andy's Brain</a>, an independent, unofficial archive.</footer>
+</div>
+<script>
+document.getElementById("fbform").addEventListener("submit", async function (e) {
+  e.preventDefault();
+  const form = e.target;
+  const btn = form.querySelector("button");
+  btn.disabled = true; btn.textContent = "Sending...";
+  try {
+    const resp = await fetch(form.action, { method: "POST", body: new FormData(form),
+                                            headers: { Accept: "application/json" } });
+    if (resp.ok) { form.style.display = "none"; document.getElementById("ok").style.display = "block"; }
+    else { throw new Error("send failed"); }
+  } catch (err) {
+    btn.disabled = false; btn.textContent = "Send";
+    alert("Sorry, that did not send. Please try again, or raise it on GitHub.");
+  }
+});
+</script>
+</body>
+</html>
