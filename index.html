@@ -230,15 +230,15 @@ const createDbWorker = httpvfsModule.createDbWorker
   || (httpvfsModule.default && httpvfsModule.default.createDbWorker)
   || httpvfsModule;
 
-const STATS = {"total": 14195, "families": [{"family": "question", "count": 4870}, {"family": "division", "count": 4227}, {"family": "debate", "count": 2607}, {"family": "press", "count": 1785}, {"family": "statement", "count": 577}, {"family": "minutes", "count": 63}, {"family": "hillsborough", "count": 19}, {"family": "petition", "count": 19}, {"family": "pdf-extract", "count": 10}, {"family": "evidence", "count": 7}, {"family": "pdf-extract-index", "count": 6}, {"family": "campaign", "count": 5}], "from": "2001-06-08", "to": "2026-07-10"};
+const STATS = {"total": 14218, "families": [{"family": "question", "count": 4870}, {"family": "division", "count": 4227}, {"family": "debate", "count": 2607}, {"family": "press", "count": 1803}, {"family": "statement", "count": 577}, {"family": "minutes", "count": 63}, {"family": "hillsborough", "count": 19}, {"family": "petition", "count": 19}, {"family": "pdf-extract", "count": 10}, {"family": "evidence", "count": 7}, {"family": "campaign", "count": 6}, {"family": "pdf-extract-index", "count": 6}, {"family": "speech", "count": 4}], "from": "2001-06-08", "to": "2026-07-10"};
 const DB_CONFIG = {
   from: "inline",
   config: {
     serverMode: "chunked",
     requestChunkSize: 4096,
-    databaseLengthBytes: 59203584,
+    databaseLengthBytes: 59310080,
     serverChunkSize: 9437184,
-    urlPrefix: "index-cbfdf717.sqlite.",
+    urlPrefix: "index-71c2bc84.sqlite.",
     suffixLength: 3
   }
 };
