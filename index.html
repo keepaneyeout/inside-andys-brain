@@ -80,6 +80,8 @@
   .card.f-pdf-extract, .card.f-pdf-extract-index { border-left-color: var(--pdf); }
   .card.f-press        { border-left-color: var(--prs); }
   .card.f-campaign     { border-left-color: #166534; }
+  .card.f-minutes      { border-left-color: #0e7490; }
+  .card.f-evidence     { border-left-color: #4338ca; }
   .meta { font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .pill { border-radius: 999px; padding: 2px 10px; font-weight: 600; }
   .pill.fam-question     { background: #e4edfd; color: var(--q); }
@@ -91,6 +93,8 @@
   .pill.fam-pdf-extract, .pill.fam-pdf-extract-index { background: #e8ecf1; color: var(--pdf); }
   .pill.fam-press        { background: #fdf0dd; color: var(--prs); }
   .pill.fam-campaign     { background: #e2f3e8; color: #166534; }
+  .pill.fam-minutes      { background: #e0f2f7; color: #0e7490; }
+  .pill.fam-evidence     { background: #e5e4fb; color: #4338ca; }
   .pill.voice-contextual { background: #f1f2f4; color: var(--muted); font-weight: 500; }
   .pill.voice-direct { background: #e5f5eb; color: var(--aye); font-weight: 500; }
   .pill.vote-aye { background: var(--aye); color: #fff; }
@@ -159,6 +163,8 @@
         <option value="pdf-extract">Report extracts</option>
         <option value="press">Press coverage</option>
         <option value="campaign">Campaign speeches and manifestos</option>
+        <option value="minutes">GM governance minutes</option>
+        <option value="evidence">Committee evidence</option>
       </select>
       <select id="voice">
         <option value="">His words and context</option>
@@ -197,7 +203,7 @@
     Public sources only: Hansard via TheyWorkForYou, Public Whip division data, gov.uk and the UK Government
     Web Archive, GMCA press, press records (summary and link only, with Guardian coverage via the Guardian Open Platform) and extracted government reports.
     Every result links to its source. Contextual documents are material about his campaigns, not his words.
-    Data snapshot: 9 July 2026. Search runs in your browser; only the slices of the database a query needs are downloaded.
+    Data snapshot: 10 July 2026. Search runs in your browser; only the slices of the database a query needs are downloaded.
     <br><a href="about.html" style="color:#c0264b; font-weight:600;">About this site</a> — built by Tom Watson with Claude, Anthropic's AI assistant, as part of a coding training project. Independent and unofficial.
     Spotted an error or a gap? <a href="feedback.html" style="color:#c0264b;">Tell us</a>.
     Following the leadership race? <a href="nominations.html" style="color:#c0264b;">The nominations, tracked</a>.
@@ -223,15 +229,15 @@ const createDbWorker = httpvfsModule.createDbWorker
   || (httpvfsModule.default && httpvfsModule.default.createDbWorker)
   || httpvfsModule;
 
-const STATS = {"total": 14174, "families": [{"family": "question", "count": 4870}, {"family": "division", "count": 4227}, {"family": "debate", "count": 2607}, {"family": "press", "count": 1775}, {"family": "statement", "count": 577}, {"family": "minutes", "count": 63}, {"family": "hillsborough", "count": 19}, {"family": "petition", "count": 19}, {"family": "pdf-extract", "count": 10}, {"family": "pdf-extract-index", "count": 6}, {"family": "campaign", "count": 1}], "from": "2001-06-08", "to": "2026-07-09"};
+const STATS = {"total": 14185, "families": [{"family": "question", "count": 4870}, {"family": "division", "count": 4227}, {"family": "debate", "count": 2607}, {"family": "press", "count": 1779}, {"family": "statement", "count": 577}, {"family": "minutes", "count": 63}, {"family": "hillsborough", "count": 19}, {"family": "petition", "count": 19}, {"family": "pdf-extract", "count": 10}, {"family": "evidence", "count": 7}, {"family": "pdf-extract-index", "count": 6}, {"family": "campaign", "count": 1}], "from": "2001-06-08", "to": "2026-07-09"};
 const DB_CONFIG = {
   from: "inline",
   config: {
     serverMode: "chunked",
     requestChunkSize: 4096,
-    databaseLengthBytes: 58331136,
+    databaseLengthBytes: 58949632,
     serverChunkSize: 9437184,
-    urlPrefix: "index-79d9915d.sqlite.",
+    urlPrefix: "index-a4d8290a.sqlite.",
     suffixLength: 3
   }
 };
