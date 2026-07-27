@@ -251,11 +251,11 @@ const $ = id => document.getElementById(id);
 const state = { offset: 0, limit: 20, total: 0, running: false, db: null, autoFamily: false };
 
 const EXAMPLES = [
-  { label: "How did he vote on Iraq?", q: "Iraq", family: "division" },
-  { label: "Hillsborough disclosure", q: "Hillsborough disclosure" },
+  { label: "His first speech as PM", q: "first speech as Prime Minister" },
+  { label: "Cutting VAT on energy bills", q: "electricity bills VAT" },
+  { label: "No 10 North", q: "No 10 North" },
+  { label: "The Hillsborough Law", q: "Hillsborough Law" },
   { label: "What he said about buses", q: "bus franchising" },
-  { label: "National Care Service", q: "\"National Care Service\"" },
-  { label: "The leadership speech", q: "No 10 North", family: "" },
   { label: "Votes he missed on Europe", q: "European Union", family: "division", vote: "absent" }
 ];
 
@@ -515,7 +515,7 @@ for (const ex of EXAMPLES) {
     state.db = worker.db;
     await state.db.query("SELECT 1");
     $("q").disabled = false; $("gobtn").disabled = false;
-    $("q").placeholder = "Ask anything: how did he vote on Iraq? what did he say about buses?";
+    $("q").placeholder = "Ask anything: what has he announced as PM? what did he say about buses?";
     $("q").focus();
   } catch (e) {
     showError("The search engine could not start: " + (e && e.message ? e.message : e) +
