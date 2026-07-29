@@ -15,9 +15,9 @@
 <meta name="twitter:card" content="summary_large_image">
 <style>
   :root {
-    --ink: #23272d; --muted: #6b7280; --paper: #faf7f2; --card: #ffffff;
-    --line: #eae4da; --mark: #ffe9a8;
-    --grad: linear-gradient(120deg, #b91c3b 0%, #e8563f 55%, #f5a623 100%);
+    --ink: #1f2337; --muted: #6d7183; --paper: #fdf6f3; --card: #ffffff;
+    --line: #f2dcd3; --mark: #ffdfcb;
+    --grad: linear-gradient(120deg, #e31241 0%, #e31241 55%, #e31241 100%);
     --q: #2563eb; --div: #7c3aed; --deb: #0d9488; --st: #ea580c;
     --pet: #db2777; --hil: #b91c1c; --pdf: #475569; --prs: #b45309;
     --aye: #15803d; --no: #b91c1c; --abs: #64748b; --both: #a16207;
@@ -26,6 +26,7 @@
   body { margin: 0; background: var(--paper); color: var(--ink);
          font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
   .banner { background: var(--grad); color: #fff; padding: 44px 20px 78px; text-align: center; }
+  .banner .portrait { width: 148px; height: auto; display: block; margin: 0 auto 12px; }
   .banner h1 { margin: 0; font-size: 40px; letter-spacing: -0.02em; text-shadow: 0 1px 3px rgba(0,0,0,.18); }
   .banner h1 .brain { font-size: 44px; vertical-align: -4px; margin-right: 6px; }
   .banner p.tag { margin: 10px auto 0; font-size: 16.5px; max-width: 560px; opacity: .95; }
@@ -38,7 +39,7 @@
   form.bar { display: flex; gap: 10px; }
   input[type=search] { flex: 1; font-size: 17px; padding: 13px 16px; border: 2px solid var(--line);
          border-radius: 12px; background: #fffdf9; outline: none; }
-  input[type=search]:focus { border-color: #e8563f; }
+  input[type=search]:focus { border-color: #e31241; }
   button.go { font-size: 16px; font-weight: 600; padding: 13px 26px; border: 0; border-radius: 12px;
          background: var(--grad); color: #fff; cursor: pointer; }
   button.go:hover { filter: brightness(1.06); }
@@ -65,7 +66,7 @@
   .chip:nth-child(6n+6) { color: var(--hil); border-color: #f3c0c0; }
   .chip:hover { background: #fff6ec; }
   .status { margin: 22px 4px 4px; color: var(--muted); font-size: 14px; }
-  .curate { margin-top: 14px; background: linear-gradient(120deg, #fdf0e4, #fdeadd); border: 1px solid #f0c9a8;
+  .curate { margin-top: 14px; background: linear-gradient(120deg, #fdece6, #fbdfd6); border: 1px solid #efc4b5;
             border-radius: 12px; padding: 11px 15px; font-size: 14px; color: #7c3f10; }
   .curate a { color: #c0264b; font-weight: 600; }
   .card { background: var(--card); border: 1px solid var(--line); border-left-width: 5px;
@@ -87,7 +88,7 @@
   .pill.fam-question     { background: #e4edfd; color: var(--q); }
   .pill.fam-division     { background: #efe7fd; color: var(--div); }
   .pill.fam-debate       { background: #dff4f2; color: var(--deb); }
-  .pill.fam-statement    { background: #fdeadd; color: var(--st); }
+  .pill.fam-statement    { background: #fbdfd6; color: var(--st); }
   .pill.fam-petition     { background: #fce4f0; color: var(--pet); }
   .pill.fam-hillsborough { background: #fbe3e3; color: var(--hil); }
   .pill.fam-pdf-extract, .pill.fam-pdf-extract-index { background: #e8ecf1; color: var(--pdf); }
@@ -114,7 +115,7 @@
   .full p { margin: 0 0 10px; white-space: pre-wrap; }
   .full .prov { color: var(--muted); font-size: 12.5px; }
   .more { display: block; margin: 20px auto 0; font-size: 14.5px; font-weight: 600; padding: 11px 28px;
-          border: 2px solid #f0c9a8; border-radius: 999px; background: #fff; color: #c0264b; cursor: pointer; }
+          border: 2px solid #efc4b5; border-radius: 999px; background: #fff; color: #c0264b; cursor: pointer; }
   .more:hover { background: #fff6ec; }
   footer { margin-top: 40px; color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--line);
           padding-top: 14px; text-align: center; }
@@ -128,19 +129,20 @@
     form.bar { flex-direction: column; }
   }
   @media (prefers-color-scheme: dark) {
-    :root { --ink: #e8e6e1; --muted: #a2a7ad; --paper: #151619; --card: #1f2125;
-            --line: #34363c; --mark: #5c4a12; }
+    :root { --ink: #ece9e4; --muted: #a4a9bd; --paper: #14172a; --card: #1f2337;
+            --line: #343a52; --mark: #5c1f33; }
     input[type=search], .filters select, .filters input[type=date], .chip, .more { background: var(--card); color: var(--ink); }
     .snip { color: #c6c9cd; }
     .full { color: #d2d4d8; }
     .actions a, .actions button, .more { color: #f0917a; }
-    mark { color: #ffe9a8; }
+    mark { color: #ffdfcb; }
   }
 </style>
 </head>
 <body>
 <div class="banner">
-  <h1><span class="brain">🧠</span>Inside Andy's Brain</h1>
+  <img class="portrait" src="portrait.jpeg" alt="Andy Burnham, illustration by Stanley Chow" width="148" height="197">
+  <h1>Inside Andy's Brain</h1>
   <p class="tag">Search everything Andy Burnham has said and voted on: every Commons speech, question and division, ministerial speeches, mayoral statements and the documents behind his campaigns.</p>
   <div class="stats" id="stats"></div>
 </div>
@@ -207,7 +209,7 @@
     Every result links to its source. Contextual documents are material about his campaigns, not his words.
     Data snapshot: 29 July 2026. Search runs in your browser; only the slices of the database a query needs are downloaded.
     <br><a href="about.html" style="color:#c0264b; font-weight:600;">About this site</a> — built by Tom Watson with Claude, Anthropic's AI assistant, as part of a coding training project. Independent and unofficial.
-    Spotted an error or a gap? <a href="feedback.html" style="color:#c0264b;">Tell us</a>.
+    Spotted an error or a gap? <a href="feedback.html" style="color:#c0264b;">Tell us</a>. Portrait illustration by Stanley Chow, used with permission.
     How he became Prime Minister: <a href="nominations.html" style="color:#c0264b;">the 2026 contest, archived</a>.
   </footer>
 </div>
