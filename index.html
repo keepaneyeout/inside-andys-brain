@@ -65,6 +65,10 @@
   .chip:nth-child(6n+5) { color: var(--pet); border-color: #f7c3dd; }
   .chip:nth-child(6n+6) { color: var(--hil); border-color: #f3c0c0; }
   .chip:hover { background: #fff6ec; }
+  .pchip { font-size: 13px; padding: 5px 13px; border-radius: 999px; cursor: pointer;
+           background: #fff; border: 1.5px solid var(--line); color: var(--muted); font-weight: 600; }
+  .pchip:hover { background: #fff6ec; }
+  .pchip.on { background: var(--grad); color: #fff; border-color: transparent; }
   .status { margin: 22px 4px 4px; color: var(--muted); font-size: 14px; scroll-margin-top: 16px; }
   .curate { margin-top: 14px; background: linear-gradient(120deg, #fdece6, #fbdfd6); border: 1px solid #efc4b5;
             border-radius: 12px; padding: 11px 15px; font-size: 14px; color: #7c3f10; }
@@ -188,6 +192,7 @@
         <option value="oldest">Oldest first</option>
       </select>
     </div>
+    <div class="chips" id="periods"></div>
     <div class="chips" id="chips"></div>
     <div class="err" id="err"></div>
   </div>
@@ -285,6 +290,10 @@ function renderBody(md) {
   return out.join("");
 }
 function showError(msg) { const e = $("err"); e.textContent = msg; e.style.display = "block"; }
+function updateMore(shown, total) {
+  $("more").hidden = shown >= total;
+  $("more").textContent = `Load more (showing ${shown} of ${total.toLocaleString("en-GB")})`;
+}
 
 const VOTE_INTENT = new Set(["vote", "voted", "votes", "voting"]);
 function simplify(q, alsoStrip) {
@@ -335,12 +344,19 @@ async function expandTokens(tokens, where, args) {
   }
   return out;
 }
-// Best match blends textual relevance with recency: bm25 is negative-better,
-// so subtracting a scaled days-since-2001 term nudges recent records up
-// without letting a weak new match beat a strong old one. Newest and oldest
-// are plain date orderings with bm25 breaking ties.
+// Best match blends four signals. bm25 is negative-better throughout.
+// Title matches count ten times body matches, so a record about a topic
+// beats one that mentions it in passing. A scaled days-since-2001 term
+// nudges recent records up without letting a weak new match beat a strong
+// old one. Routine written questions carry a small penalty so they stop
+// flooding broad queries. Records in Burnham's own voice get a small boost,
+// because his words are the point of the site. Newest and oldest are plain
+// date orderings with bm25 breaking ties.
 const ORDERINGS = {
-  best: "bm25(records_fts) - COALESCE(julianday(r.date) - julianday('2001-01-01'), 0) * 0.0005",
+  best: `bm25(records_fts, 10.0, 1.0)
+    - COALESCE(julianday(r.date) - julianday('2001-01-01'), 0) * 0.0005
+    + (CASE WHEN r.family = 'question' THEN 1.5 ELSE 0 END)
+    - (CASE WHEN r.voice = 'direct' THEN 0.8 ELSE 0 END)`,
   newest: "r.date DESC, bm25(records_fts)",
   oldest: "r.date ASC, bm25(records_fts)"
 };
@@ -463,7 +479,7 @@ async function search(reset) {
           $("status").textContent =
             `${probe.total.toLocaleString("en-GB")} of his votes match ${topic.join(" ")}, showing ${shown}. ` +
             `Showing division votes for this question; your next search covers everything again.`;
-          $("more").hidden = shown >= probe.total;
+          updateMore(shown, probe.total);
           state.offset = shown; state.lastQuery = loose;
           return;
         }
@@ -480,7 +496,7 @@ async function search(reset) {
     $("status").textContent = data.total
       ? `${data.total.toLocaleString("en-GB")} result${data.total === 1 ? "" : "s"} for ${q}${interpreted}, showing ${shown}`
       : `No results for ${q}. Try key words only, a prefix* or different filters.`;
-    $("more").hidden = shown >= data.total;
+    updateMore(shown, data.total);
     state.offset = shown;
   } catch (e) {
     $("status").textContent = "";
@@ -498,8 +514,34 @@ $("more").addEventListener("click", () => search(false));
 for (const id of ["family", "voice", "vote", "from", "to", "sort"])
   $(id).addEventListener("change", () => {
     if (id === "family") state.autoFamily = false;
+    if (id === "from" || id === "to") clearPeriodHighlight();
     if ($("q").value.trim()) search(true);
   });
+
+// One-click eras: each chip fills the from/to date filters for a period of
+// his career, highlighted while active. Editing the dates by hand or using
+// an example chip clears the highlight.
+const PERIODS = [
+  { label: "As PM", from: "2026-07-20", to: "" },
+  { label: "As Mayor", from: "2017-05-08", to: "2026-06-19" },
+  { label: "As MP for Leigh", from: "2001-06-07", to: "2017-05-03" },
+  { label: "Any time", from: "", to: "" }
+];
+const periodsEl = $("periods");
+function clearPeriodHighlight() {
+  for (const o of periodsEl.children) o.classList.remove("on");
+}
+for (const p of PERIODS) {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "pchip"; b.textContent = p.label;
+  b.addEventListener("click", () => {
+    $("from").value = p.from; $("to").value = p.to;
+    clearPeriodHighlight();
+    if (p.from || p.to) b.classList.add("on");
+    if ($("q").value.trim()) search(true);
+  });
+  periodsEl.appendChild(b);
+}
 
 const chips = $("chips");
 for (const ex of EXAMPLES) {
@@ -510,6 +552,7 @@ for (const ex of EXAMPLES) {
     $("family").value = ex.family || "";
     $("vote").value = ex.vote || "";
     $("voice").value = ""; $("from").value = ""; $("to").value = ""; $("sort").value = "best";
+    clearPeriodHighlight();
     search(true);
   });
   chips.appendChild(b);
