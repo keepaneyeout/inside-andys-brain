@@ -65,7 +65,7 @@
   .chip:nth-child(6n+5) { color: var(--pet); border-color: #f7c3dd; }
   .chip:nth-child(6n+6) { color: var(--hil); border-color: #f3c0c0; }
   .chip:hover { background: #fff6ec; }
-  .status { margin: 22px 4px 4px; color: var(--muted); font-size: 14px; }
+  .status { margin: 22px 4px 4px; color: var(--muted); font-size: 14px; scroll-margin-top: 16px; }
   .curate { margin-top: 14px; background: linear-gradient(120deg, #fdece6, #fbdfd6); border: 1px solid #efc4b5;
             border-radius: 12px; padding: 11px 15px; font-size: 14px; color: #7c3f10; }
   .curate a { color: #c0264b; font-weight: 600; }
@@ -182,6 +182,11 @@
       </select>
       <input type="date" id="from" title="From date">
       <input type="date" id="to" title="To date">
+      <select id="sort" title="Sort order">
+        <option value="best">Best match</option>
+        <option value="newest">Newest first</option>
+        <option value="oldest">Oldest first</option>
+      </select>
     </div>
     <div class="chips" id="chips"></div>
     <div class="err" id="err"></div>
@@ -207,7 +212,7 @@
     Public sources only: Hansard via TheyWorkForYou, Public Whip division data, gov.uk and the UK Government
     Web Archive, GMCA press, press records (summary and link only, with Guardian coverage via the Guardian Open Platform) and extracted government reports.
     Every result links to its source. Contextual documents are material about his campaigns, not his words.
-    Data snapshot: 12 August 2026. Search runs in your browser; only the slices of the database a query needs are downloaded.
+    Data snapshot: 13 August 2026. Search runs in your browser; only the slices of the database a query needs are downloaded.
     <br><a href="about.html" style="color:#c0264b; font-weight:600;">About this site</a> — built by Tom Watson with Claude, Anthropic's AI assistant, as part of a coding training project. Independent and unofficial.
     Spotted an error or a gap? <a href="feedback.html" style="color:#c0264b;">Tell us</a>. Portrait illustration by Stanley Chow, used with permission.
     How he became Prime Minister: <a href="nominations.html" style="color:#c0264b;">the 2026 contest, archived</a>.
@@ -330,8 +335,18 @@ async function expandTokens(tokens, where, args) {
   }
   return out;
 }
+// Best match blends textual relevance with recency: bm25 is negative-better,
+// so subtracting a scaled days-since-2001 term nudges recent records up
+// without letting a weak new match beat a strong old one. Newest and oldest
+// are plain date orderings with bm25 breaking ties.
+const ORDERINGS = {
+  best: "bm25(records_fts) - COALESCE(julianday(r.date) - julianday('2001-01-01'), 0) * 0.0005",
+  newest: "r.date DESC, bm25(records_fts)",
+  oldest: "r.date ASC, bm25(records_fts)"
+};
 async function runSearch(matchExpr, where, args, limit, offset) {
   const a = args.slice(); a[0] = matchExpr;
+  const order = ORDERINGS[$("sort").value] || ORDERINGS.best;
   const countRows = await state.db.query(
     `SELECT COUNT(*) AS n FROM records_fts JOIN records r ON r.id = records_fts.rowid WHERE ${where}`, a);
   const total = countRows[0] ? countRows[0].n : 0;
@@ -341,7 +356,7 @@ async function runSearch(matchExpr, where, args, limit, offset) {
       `SELECT r.date, r.family, r.voice, r.vote, r.title, r.path, r.url, r.alt_url,
               snippet(records_fts, 1, '[[[', ']]]', ' ... ', 16) AS snip
        FROM records_fts JOIN records r ON r.id = records_fts.rowid
-       WHERE ${where} ORDER BY bm25(records_fts) LIMIT ? OFFSET ?`, a.concat([limit, offset]));
+       WHERE ${where} ORDER BY ${order} LIMIT ? OFFSET ?`, a.concat([limit, offset]));
   }
   return { total, rows };
 }
@@ -414,9 +429,10 @@ function card(r) {
 async function search(reset) {
   const q = $("q").value.trim();
   if (!q || state.running || !state.db) return;
-  state.running = true; $("gobtn").disabled = true;
+  state.running = true; $("gobtn").disabled = true; $("gobtn").textContent = "Searching…";
   if (reset) { state.offset = 0; state.lastQuery = null; $("results").innerHTML = ""; $("more").hidden = true; }
   $("status").textContent = "Rummaging through the brain…";
+  if (reset) $("status").scrollIntoView({ behavior: "smooth", block: "start" });
   try {
     // A filter the machine set clears itself on the next fresh search;
     // filters a person chose by hand are left alone.
@@ -473,13 +489,13 @@ async function search(reset) {
       ? "The site's data was updated while this page was open, so your browser is mixing old and new pieces. Refresh the page (Cmd+Shift+R, or Ctrl+F5 on Windows) and search again."
       : "Search failed: " + msg);
   } finally {
-    state.running = false; $("gobtn").disabled = false;
+    state.running = false; $("gobtn").disabled = false; $("gobtn").textContent = "Search";
   }
 }
 
 $("form").addEventListener("submit", ev => { ev.preventDefault(); search(true); });
 $("more").addEventListener("click", () => search(false));
-for (const id of ["family", "voice", "vote", "from", "to"])
+for (const id of ["family", "voice", "vote", "from", "to", "sort"])
   $(id).addEventListener("change", () => {
     if (id === "family") state.autoFamily = false;
     if ($("q").value.trim()) search(true);
@@ -493,7 +509,7 @@ for (const ex of EXAMPLES) {
     $("q").value = ex.q;
     $("family").value = ex.family || "";
     $("vote").value = ex.vote || "";
-    $("voice").value = ""; $("from").value = ""; $("to").value = "";
+    $("voice").value = ""; $("from").value = ""; $("to").value = ""; $("sort").value = "best";
     search(true);
   });
   chips.appendChild(b);
