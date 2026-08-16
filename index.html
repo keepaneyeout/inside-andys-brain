@@ -89,6 +89,7 @@
   .card.f-evidence     { border-left-color: #4338ca; }
   .meta { font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .pill { border-radius: 999px; padding: 2px 10px; font-weight: 600; }
+  .pill.dupe             { background: #eceff3; color: #4a5462; font-weight: 500; }
   .pill.fam-question     { background: #e4edfd; color: var(--q); }
   .pill.fam-division     { background: #efe7fd; color: var(--div); }
   .pill.fam-debate       { background: #dff4f2; color: var(--deb); }
@@ -262,7 +263,8 @@ const STOPWORDS = new Set(("a an and are as at be but by did do does for from ha
   "mentioned think thinks thought ever everything anything something whats hes shes its dont didnt").split(" "));
 
 const $ = id => document.getElementById(id);
-const state = { offset: 0, limit: 20, total: 0, running: false, db: null, autoFamily: false };
+const state = { offset: 0, rowsSeen: 0, limit: 20, total: 0, running: false,
+                db: null, autoFamily: false, groups: new Map(), lastNote: null };
 
 const EXAMPLES = [
   { label: "His first speech as PM", q: "first speech as Prime Minister" },
@@ -291,9 +293,12 @@ function renderBody(md) {
   return out.join("");
 }
 function showError(msg) { const e = $("err"); e.textContent = msg; e.style.display = "block"; }
-function updateMore(shown, total) {
-  $("more").hidden = shown >= total;
-  $("more").textContent = `Load more (showing ${shown} of ${total.toLocaleString("en-GB")})`;
+function updateMore(shown, total, exhausted) {
+  // Speeches from one debate share a card, so the number of cards on screen is
+  // not the number of matching records. The button hides when the records run
+  // out, not when the two numbers meet, or it would never hide.
+  $("more").hidden = exhausted === undefined ? shown >= total : exhausted;
+  $("more").textContent = `Load more (showing ${shown} of ${total.toLocaleString("en-GB")} records)`;
 }
 
 const VOTE_INTENT = new Set(["vote", "voted", "votes", "voting"]);
@@ -353,11 +358,22 @@ async function expandTokens(tokens, where, args) {
 // flooding broad queries. Records in Burnham's own voice get a small boost,
 // because his words are the point of the site. Newest and oldest are plain
 // date orderings with bm25 breaking ties.
+// Hansard and division titles are section headings, not subjects: a speech
+// filed under "Energy and Climate Change: Barts Health NHS Trust" is about a
+// hospital trust, yet the ten-times title weight scored it as a strong match
+// for climate change. Comparing bm25 with the title weighted against bm25 on
+// the body alone isolates how much of a record's score came from its title,
+// and a third of that is clawed back for those two families only, leaving
+// press, GMCA and social titles, which are real titles, at full weight.
+const TITLE_CLAWBACK = `(CASE WHEN r.folder_family IN ('commons', 'votes')
+      THEN (bm25(records_fts, 0.0, 1.0) - bm25(records_fts, 10.0, 1.0)) * 0.35
+      ELSE 0 END)`;
 const ORDERINGS = {
   best: `bm25(records_fts, 10.0, 1.0)
     - COALESCE(julianday(r.date) - julianday('2001-01-01'), 0) * 0.0005
     + (CASE WHEN r.family = 'question' THEN 1.5 ELSE 0 END)
-    - (CASE WHEN r.voice = 'direct' THEN 0.8 ELSE 0 END)`,
+    - (CASE WHEN r.voice = 'direct' THEN 0.8 ELSE 0 END)
+    + ${TITLE_CLAWBACK}`,
   newest: "r.date DESC, bm25(records_fts)",
   oldest: "r.date ASC, bm25(records_fts)"
 };
@@ -370,12 +386,35 @@ async function runSearch(matchExpr, where, args, limit, offset) {
   let rows = [];
   if (total > 0) {
     rows = await state.db.query(
-      `SELECT r.date, r.family, r.voice, r.vote, r.title, r.path, r.url, r.alt_url,
+      `SELECT r.date, r.family, r.folder_family, r.voice, r.vote, r.title, r.path, r.url, r.alt_url,
               snippet(records_fts, 1, '[[[', ']]]', ' ... ', 16) AS snip
        FROM records_fts JOIN records r ON r.id = records_fts.rowid
        WHERE ${where} ORDER BY ${order} LIMIT ? OFFSET ?`, a.concat([limit, offset]));
   }
   return { total, rows };
+}
+// How a typed question becomes an FTS expression. This used to happen only
+// when a search returned nothing, which meant it almost never happened: a
+// long debate record contains the words what, does and the, so "what does he
+// think about the NHS" matched 75 records on filler alone, never hit zero and
+// never got cleaned up. Now every unquoted query is reduced to its topic
+// words first. A multi-word topic is tried as a phrase, and the phrase is
+// kept when it returns enough to fill a page, so "climate change" means the
+// phrase rather than climate AND change anywhere in the same record.
+const PHRASE_MIN = 5;
+async function interpret(q) {
+  if (q.includes('"')) return { expr: q, note: null };
+  const toks = simplify(q);
+  if (!toks.length) return { expr: q, note: null };
+  const and = toks.join(" ");
+  const note = and !== q.trim().toLowerCase() ? and : null;
+  if (toks.length > 1) {
+    const phrase = '"' + and + '"';
+    const { where, args } = buildWhere();
+    if (await countFor(phrase, where, args) >= PHRASE_MIN)
+      return { expr: phrase, note: phrase };
+  }
+  return { expr: and, note };
 }
 async function doQuery(q, limit, offset) {
   const { where, args } = buildWhere();
@@ -443,13 +482,64 @@ function card(r) {
   return div;
 }
 
+// One Commons debate is stored as one record per speech, up to 57 of them
+// sharing a date and a title, so a title match used to hand a single debate
+// most of the first page: "national health service" returned four distinct
+// records in its top twenty. Speeches from the same debate now collapse into
+// one card carrying a count. Only Hansard speeches are grouped; divisions
+// that share a title on the same day are separate votes and stay separate.
+function groupKey(r) {
+  return r.folder_family === "commons" ? (r.date || "") + "|" + (r.title || "") : null;
+}
+function addRows(rows) {
+  let added = 0;
+  for (const r of rows) {
+    const key = groupKey(r), g = key ? state.groups.get(key) : null;
+    if (g) {
+      g.n++;
+      let b = g.el.querySelector(".dupe");
+      if (!b) {
+        b = document.createElement("span");
+        b.className = "pill dupe";
+        g.el.querySelector(".meta").appendChild(b);
+      }
+      b.textContent = `${g.n} speeches in this debate`;
+      continue;
+    }
+    const el = card(r);
+    if (key) state.groups.set(key, { el, n: 1 });
+    $("results").appendChild(el);
+    added++;
+  }
+  return added;
+}
+// Grouping means a page of rows is not a page of cards, so rows are pulled in
+// blocks until enough new cards exist to fill the page or the results run out.
+const FETCH = 150, FETCH_TRIES = 4;
+async function collectPage(expr) {
+  let added = 0, total = state.total, note = null, tries = 0;
+  while (added < state.limit && tries++ < FETCH_TRIES) {
+    const d = await doQuery(expr, FETCH, state.rowsSeen);
+    total = d.total;
+    if (d.searched) note = d.searched;
+    if (!d.rows.length) break;
+    state.rowsSeen += d.rows.length;
+    added += addRows(d.rows);
+    if (state.rowsSeen >= total) break;
+  }
+  return { total, note };
+}
+
 async function search(reset) {
   const q = $("q").value.trim();
   if (!q || state.running || !state.db) return;
   state.running = true; $("gobtn").disabled = true; $("gobtn").textContent = "Searching…";
   $("more").disabled = true;
   if (!reset) $("more").textContent = "Loading more…";
-  if (reset) { state.offset = 0; state.lastQuery = null; $("results").innerHTML = ""; $("more").hidden = true; }
+  if (reset) {
+    state.offset = 0; state.rowsSeen = 0; state.groups = new Map();
+    state.lastQuery = null; $("results").innerHTML = ""; $("more").hidden = true;
+  }
   $("status").textContent = "Rummaging through the brain…";
   if (reset) $("status").scrollIntoView({ behavior: "smooth", block: "start" });
   try {
@@ -476,30 +566,34 @@ async function search(reset) {
         const probe = await doQuery(loose, state.limit, 0);
         if (probe.total > 0) {
           state.total = probe.total;
-          for (const r of probe.rows) $("results").appendChild(card(r));
+          state.rowsSeen = probe.rows.length;
+          addRows(probe.rows);
           const shown = $("results").children.length;
           state.autoFamily = true;
           $("status").textContent =
             `${probe.total.toLocaleString("en-GB")} of his votes match ${topic.join(" ")}, showing ${shown}. ` +
             `Showing division votes for this question; your next search covers everything again.`;
-          updateMore(shown, probe.total);
+          updateMore(shown, probe.total, state.rowsSeen >= probe.total);
           state.offset = shown; state.lastQuery = loose;
           return;
         }
         $("family").value = "";
       }
     }
-    const effectiveQ = (!reset && state.lastQuery) ? state.lastQuery : q;
-    const data = await doQuery(effectiveQ, state.limit, state.offset);
-    if (reset) state.lastQuery = q;
+    let expr = state.lastQuery, note = state.lastNote || null;
+    if (reset || !expr) {
+      const read = await interpret(q);
+      expr = read.expr; note = read.note;
+      state.lastQuery = expr; state.lastNote = note;
+    }
+    const data = await collectPage(expr);
     state.total = data.total;
-    for (const r of data.rows) $("results").appendChild(card(r));
     const shown = $("results").children.length;
-    const interpreted = data.searched ? ` (interpreted as: ${data.searched})` : "";
+    const interpreted = (data.note || note) ? ` (interpreted as: ${data.note || note})` : "";
     $("status").textContent = data.total
-      ? `${data.total.toLocaleString("en-GB")} result${data.total === 1 ? "" : "s"} for ${q}${interpreted}, showing ${shown}`
+      ? `${data.total.toLocaleString("en-GB")} record${data.total === 1 ? "" : "s"} match ${q}${interpreted}, showing ${shown} result${shown === 1 ? "" : "s"}`
       : `No results for ${q}. Try key words only, a prefix* or different filters.`;
-    updateMore(shown, data.total);
+    updateMore(shown, data.total, state.rowsSeen >= data.total);
     state.offset = shown;
   } catch (e) {
     $("status").textContent = "";
