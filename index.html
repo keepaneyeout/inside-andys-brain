@@ -518,7 +518,10 @@ function addRows(rows, cap) {
 // Grouping means a page of rows is not a page of cards, so rows are pulled in
 // blocks and held in a buffer: enough are rendered to fill the page and the
 // remainder waits for the next click rather than being re-fetched or dropped.
-const FETCH = 150, FETCH_TRIES = 4;
+// Blocks are kept small: every fetched row costs a snippet and a database
+// read over the network, and a large block made a single search heavy enough
+// to start failing reads part way through a browsing session.
+const FETCH = 60, FETCH_TRIES = 6;
 async function collectPage(expr) {
   let added = 0, total = state.total, note = null, tries = 0;
   while (added < state.limit) {
