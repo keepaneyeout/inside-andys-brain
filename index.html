@@ -89,7 +89,20 @@
   .card.f-evidence     { border-left-color: #4338ca; }
   .meta { font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .pill { border-radius: 999px; padding: 2px 10px; font-weight: 600; }
-  .pill.dupe             { background: #eceff3; color: #4a5462; font-weight: 500; }
+  .pill.dupe             { background: #eceff3; color: #4a5462; font-weight: 500; border: 0;
+                           cursor: pointer; font: inherit; font-weight: 500; }
+  .pill.dupe:hover       { background: #dfe4ea; }
+  .speeches              { margin-top: 10px; border-left: 3px solid #e3e7ee; padding-left: 10px; }
+  .tip                   { font-size: 0.82rem; color: #6b7480; margin: 4px 2px 0; }
+  .aggs                  { margin: 10px 0 4px; }
+  .agg-years             { display: flex; align-items: flex-end; gap: 2px; height: 44px; margin-bottom: 6px; }
+  .agg-years .yb         { flex: 1; min-width: 3px; background: #c9d4e4; border: 0; padding: 0;
+                           cursor: pointer; border-radius: 2px 2px 0 0; }
+  .agg-years .yb:hover   { background: #8fa5c4; }
+  .agg-fams              { display: flex; flex-wrap: wrap; gap: 6px; font-size: 0.82rem; }
+  .agg-fams button       { border: 0; font: inherit; cursor: pointer; border-radius: 999px;
+                           padding: 2px 10px; background: #eceff3; color: #4a5462; }
+  .agg-fams button:hover { background: #dfe4ea; }
   .pill.fam-question     { background: #e4edfd; color: var(--q); }
   .pill.fam-division     { background: #efe7fd; color: var(--div); }
   .pill.fam-debate       { background: #dff4f2; color: var(--deb); }
@@ -173,6 +186,9 @@
         <option value="campaign">Campaign speeches and manifestos</option>
         <option value="minutes">GM governance minutes</option>
         <option value="evidence">Committee evidence</option>
+        <option value="social">His social posts</option>
+        <option value="speech">Speeches</option>
+        <option value="pdf-extract-index">Report indexes</option>
       </select>
       <select id="voice">
         <option value="">His words and context</option>
@@ -196,6 +212,7 @@
     </div>
     <div class="chips" id="periods"></div>
     <div class="chips" id="chips"></div>
+    <p class="tip">Tip: "exact phrase", OR, NOT and prefix* all work. Searches live in the address bar, so any result set can be bookmarked or shared.</p>
     <div class="err" id="err"></div>
   </div>
 
@@ -209,6 +226,10 @@
   </nav>
 
   <div class="status" id="status"></div>
+  <div class="aggs" id="aggs" hidden>
+    <div class="agg-years" id="aggyears"></div>
+    <div class="agg-fams" id="aggfams"></div>
+  </div>
   <div class="curate" id="curate" hidden>Following the 2026 leadership race? The story so far is curated, not just searchable:
     <a href="nominations.html">the nominations page</a> has the tally, the timeline and why MPs backed him.
     Search here covers the records behind it.</div>
@@ -264,7 +285,7 @@ const STOPWORDS = new Set(("a an and are as at be but by did do does for from ha
 
 const $ = id => document.getElementById(id);
 const state = { offset: 0, rowsSeen: 0, limit: 20, total: 0, running: false,
-                db: null, autoFamily: false, groups: new Map(), buffer: [], lastNote: null };
+                db: null, autoFamily: false, groups: new Map(), buffer: [], lastNote: null, aggToken: 0 };
 
 const EXAMPLES = [
   { label: "His first speech as PM", q: "first speech as Prime Minister" },
@@ -403,19 +424,43 @@ async function runSearch(matchExpr, where, args, limit, offset) {
 // kept when it returns enough to fill a page, so "climate change" means the
 // phrase rather than climate AND change anywhere in the same record.
 const PHRASE_MIN = 5;
+// Curated synonym table. His vocabulary changed with his roles: the corpus
+// says NHS in the Commons, health service at the despatch box, SDS40 in the
+// press. Each entry widens a query with OR so recall improves without a
+// semantic engine, and the status line shows exactly what was searched.
+// Quoting is applied when the alternative is a phrase.
+const SYNONYMS = {
+  "nhs": ["health service"],
+  "health service": ["nhs"],
+  "early release": ["sds40"],
+  "sds40": ["early release"],
+  "social care": ["national care service"],
+  "bee network": ["bus franchising"],
+  "climate change": ["net zero", "climate crisis"],
+  "net zero": ["climate change"],
+  "hillsborough law": ["public office accountability"],
+  "cost of living": ["energy bills"]
+};
+const fts = t => /\s/.test(t) ? '"' + t + '"' : t;
 async function interpret(q) {
-  if (q.includes('"')) return { expr: q, note: null };
+  if (q.includes('"') || /\b(OR|NOT|NEAR)\b/.test(q)) return { expr: q, note: null };
   const toks = simplify(q);
   if (!toks.length) return { expr: q, note: null };
   const and = toks.join(" ");
-  const note = and !== q.trim().toLowerCase() ? and : null;
+  let primary = and, note = and !== q.trim().toLowerCase() ? and : null;
   if (toks.length > 1) {
     const phrase = '"' + and + '"';
     const { where, args } = buildWhere();
-    if (await countFor(phrase, where, args) >= PHRASE_MIN)
-      return { expr: phrase, note: phrase };
+    if (await countFor(phrase, where, args) >= PHRASE_MIN) { primary = phrase; note = phrase; }
   }
-  return { expr: and, note };
+  const syn = SYNONYMS[and];
+  if (syn) {
+    // AND binds tighter than OR in FTS5, so a loose primary keeps its meaning
+    // inside the group: (social care OR "national care service").
+    const expr = "(" + [primary].concat(syn.map(fts)).join(" OR ") + ")";
+    return { expr, note: expr };
+  }
+  return { expr: primary, note };
 }
 async function doQuery(q, limit, offset) {
   const { where, args } = buildWhere();
@@ -499,18 +544,31 @@ function addRows(rows, cap) {
     const r = rows[i];
     const key = groupKey(r), g = key ? state.groups.get(key) : null;
     if (g) {
-      g.n++;
+      // Absorbed speeches stay reachable: the count is a button that unfolds
+      // the rest of the debate as cards nested under the first one.
+      g.rest.push(r);
+      const open = g.el.querySelector(".speeches");
+      if (open) open.appendChild(card(r));
       let b = g.el.querySelector(".dupe");
       if (!b) {
-        b = document.createElement("span");
+        b = document.createElement("button");
+        b.type = "button";
         b.className = "pill dupe";
+        b.addEventListener("click", () => {
+          let box = g.el.querySelector(".speeches");
+          if (box) { box.hidden = !box.hidden; return; }
+          box = document.createElement("div");
+          box.className = "speeches";
+          for (const s of g.rest) box.appendChild(card(s));
+          g.el.appendChild(box);
+        });
         g.el.querySelector(".meta").appendChild(b);
       }
-      b.textContent = `${g.n} speeches in this debate`;
+      b.textContent = `${g.rest.length + 1} speeches in this debate — show all`;
       continue;
     }
     const el = card(r);
-    if (key) state.groups.set(key, { el, n: 1 });
+    if (key) state.groups.set(key, { el, rest: [] });
     $("results").appendChild(el);
     added++;
   }
@@ -542,6 +600,83 @@ async function collectPage(expr) {
   return { total, note };
 }
 
+// The address bar carries the search. Every fresh search writes query and
+// filters into the hash via replaceState, and a page opened with a hash
+// restores and reruns it, so any result set can be bookmarked, cited or sent
+// to someone. replaceState rather than pushState: the back button should
+// leave the site, not unwind a research session click by click.
+const HASH_FIELDS = ["q", "family", "voice", "vote", "from", "to", "sort"];
+function writeHash() {
+  const p = new URLSearchParams();
+  for (const id of HASH_FIELDS) {
+    const v = $(id).value.trim();
+    if (v && !(id === "sort" && v === "best")) p.set(id, v);
+  }
+  history.replaceState(null, "", p.toString() ? "#" + p.toString() : location.pathname + location.search);
+}
+function applyHash() {
+  if (!location.hash || location.hash.length < 2) return false;
+  const p = new URLSearchParams(location.hash.slice(1));
+  if (!p.get("q")) return false;
+  for (const id of HASH_FIELDS) if (p.has(id)) $(id).value = p.get(id);
+  return true;
+}
+
+// Shape of the result set: records by year as a clickable bar strip, and
+// per-family counts as clickable chips. Run after the cards render, not
+// awaited before them, and only on a fresh search. A token guards against a
+// slow aggregate landing after the reader has already searched again.
+const AGG_CAP = 6000;
+async function loadAggregates(expr, total) {
+  const token = ++state.aggToken;
+  const yEl = $("aggyears"), fEl = $("aggfams");
+  if (total === 0 || total > AGG_CAP) { $("aggs").hidden = true; return; }
+  try {
+    const { where, args } = buildWhere();
+    const a = args.slice(); a[0] = expr;
+    const years = await state.db.query(
+      `SELECT r.year y, COUNT(*) n FROM records_fts JOIN records r ON r.id = records_fts.rowid
+       WHERE ${where} AND r.year IS NOT NULL GROUP BY r.year ORDER BY r.year`, a);
+    if (token !== state.aggToken || !years.length) return;
+    const fams = await state.db.query(
+      `SELECT r.family f, COUNT(*) n FROM records_fts JOIN records r ON r.id = records_fts.rowid
+       WHERE ${where} AND r.family IS NOT NULL GROUP BY r.family ORDER BY n DESC`, a);
+    if (token !== state.aggToken) return;
+    const lo = years[0].y, hi = years[years.length - 1].y;
+    const byYear = new Map(years.map(r => [r.y, r.n]));
+    const max = Math.max(...years.map(r => r.n));
+    yEl.innerHTML = "";
+    for (let y = lo; y <= hi; y++) {
+      const n = byYear.get(y) || 0;
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "yb";
+      b.style.height = Math.max(2, Math.round(n / max * 42)) + "px";
+      b.title = `${y}: ${n.toLocaleString("en-GB")} record${n === 1 ? "" : "s"} — click to filter`;
+      if (!n) b.style.background = "#edf0f4";
+      b.addEventListener("click", () => {
+        $("from").value = y + "-01-01"; $("to").value = y + "-12-31";
+        clearPeriodHighlight(); search(true);
+      });
+      yEl.appendChild(b);
+    }
+    fEl.innerHTML = "";
+    const span = document.createElement("button");
+    span.type = "button"; span.textContent = `${lo}–${hi}`;
+    span.addEventListener("click", () => { $("from").value = ""; $("to").value = ""; clearPeriodHighlight(); search(true); });
+    span.title = "Result span — click to clear the date filter";
+    fEl.appendChild(span);
+    for (const r of fams) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = `${r.f} ${r.n.toLocaleString("en-GB")}`;
+      b.title = `Only ${r.f} records`;
+      b.addEventListener("click", () => { $("family").value = r.f; state.autoFamily = false; search(true); });
+      fEl.appendChild(b);
+    }
+    $("aggs").hidden = false;
+  } catch (e) { /* the chart is decoration; never let it break a search */ }
+}
+
 async function search(reset) {
   const q = $("q").value.trim();
   if (!q || state.running || !state.db) return;
@@ -551,6 +686,7 @@ async function search(reset) {
   if (reset) {
     state.offset = 0; state.rowsSeen = 0; state.groups = new Map(); state.buffer = [];
     state.lastQuery = null; $("results").innerHTML = ""; $("more").hidden = true;
+    state.aggToken++; $("aggs").hidden = true;
   }
   $("status").textContent = "Rummaging through the brain…";
   if (reset) $("status").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -587,6 +723,7 @@ async function search(reset) {
             `Showing division votes for this question; your next search covers everything again.`;
           updateMore(shown, probe.total, state.rowsSeen >= probe.total);
           state.offset = shown; state.lastQuery = loose;
+          writeHash(); loadAggregates(loose, probe.total);
           return;
         }
         $("family").value = "";
@@ -608,6 +745,7 @@ async function search(reset) {
       : `No results for ${q}. Try key words only, a prefix* or different filters.`;
     updateMore(shown, data.total, state.rowsSeen >= data.total && !state.buffer.length);
     state.offset = shown;
+    if (reset) { writeHash(); loadAggregates(expr, data.total); }
   } catch (e) {
     const msg = String(e && e.message ? e.message : e);
     window.__lastSearchError = msg;
@@ -722,6 +860,8 @@ async function reconnect() {
     $("q").disabled = false; $("gobtn").disabled = false;
     $("q").placeholder = "Ask anything: what has he announced as PM? what did he say about buses?";
     $("q").focus();
+    // A shared or bookmarked link restores its search once the engine is up.
+    if (applyHash()) search(true);
   } catch (e) {
     showError("The search engine could not start: " + (e && e.message ? e.message : e) +
       ". Try a hard refresh (Cmd+Shift+R); if it persists, the host may not support range requests.");
