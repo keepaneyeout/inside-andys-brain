@@ -521,7 +521,7 @@ function addRows(rows, cap) {
 // Blocks are kept small: every fetched row costs a snippet and a database
 // read over the network, and a large block made a single search heavy enough
 // to start failing reads part way through a browsing session.
-const FETCH = 60, FETCH_TRIES = 6;
+const FETCH = 40, FETCH_TRIES = 6;
 async function collectPage(expr) {
   let added = 0, total = state.total, note = null, tries = 0;
   while (added < state.limit) {
@@ -607,10 +607,21 @@ async function search(reset) {
     updateMore(shown, data.total, state.rowsSeen >= data.total && !state.buffer.length);
     state.offset = shown;
   } catch (e) {
-    $("status").textContent = "";
-    $("more").textContent = "Load more";
     const msg = String(e && e.message ? e.message : e);
     window.__lastSearchError = msg;
+    // One silent repair attempt: rebuild the connection and run the search
+    // again from the top. state.retrying stops this recursing.
+    if (BROKEN.test(msg) && !state.retrying) {
+      state.retrying = true;
+      state.running = false; $("gobtn").disabled = false; $("more").disabled = false;
+      const ok = await reconnect();
+      if (ok) {
+        try { await search(true); return; } finally { state.retrying = false; }
+      }
+      state.retrying = false;
+    }
+    $("status").textContent = "";
+    $("more").textContent = "Load more";
     showError(/malformed|corrupt|404|Not Found|fetch/i.test(msg)
       ? "The site's data was updated while this page was open, so your browser is asking for pieces that have moved on. Refresh the page (Cmd+Shift+R, or Ctrl+F5 on Windows) and search again."
       : "Search failed: " + msg);
@@ -681,13 +692,27 @@ for (const ex of EXAMPLES) {
   $("stats").innerHTML = spans.join("");
 })();
 
+// The database is read over HTTP in 4KB slices by a worker. If one of those
+// reads fails, SQLite marks the connection unusable and every later query
+// dies with "vtable constructor failed", which is what made searches stop
+// working part way through a session and Load more appear to do nothing.
+// Nothing is wrong with the data, so the cure is to build a fresh connection
+// and try once more rather than asking the reader to refresh the page.
+async function connect() {
+  const worker = await createDbWorker([DB_CONFIG],
+    new URL("./sqlite.worker.js", import.meta.url).toString(),
+    new URL("./sql-wasm.wasm", import.meta.url).toString());
+  state.db = worker.db;
+  await state.db.query("SELECT 1");
+}
+const BROKEN = /vtable|malformed|corrupt|disk image|404|Not Found|fetch/i;
+async function reconnect() {
+  try { await connect(); return true; } catch (e) { return false; }
+}
+
 (async function boot() {
   try {
-    const worker = await createDbWorker([DB_CONFIG],
-      new URL("./sqlite.worker.js", import.meta.url).toString(),
-      new URL("./sql-wasm.wasm", import.meta.url).toString());
-    state.db = worker.db;
-    await state.db.query("SELECT 1");
+    await connect();
     $("q").disabled = false; $("gobtn").disabled = false;
     $("q").placeholder = "Ask anything: what has he announced as PM? what did he say about buses?";
     $("q").focus();
