@@ -6,6 +6,7 @@
 <title>Inside Andy's Brain</title>
 <meta name="description" content="Search everything Andy Burnham has said and voted on: Commons speeches, questions, every division vote, ministerial and mayoral statements, 2001 to 2026.">
 <link rel="icon" type="image/png" href="favicon.png">
+<link rel="alternate" type="application/rss+xml" title="Inside Andy's Brain: in the news" href="feed.xml">
 <link rel="apple-touch-icon" href="favicon.png">
 <meta property="og:title" content="Inside Andy's Brain">
 <meta property="og:description" content="Search everything Andy Burnham has said and voted on: over 14,000 records, 2001 to 2026, every source linked.">
@@ -30,6 +31,9 @@
   .banner h1 { margin: 0; font-size: 40px; letter-spacing: -0.02em; text-shadow: 0 1px 3px rgba(0,0,0,.18); }
   .banner h1 .brain { font-size: 44px; vertical-align: -4px; margin-right: 6px; }
   .banner p.tag { margin: 10px auto 0; font-size: 16.5px; max-width: 560px; opacity: .95; }
+  .banner .nav { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: center; }
+  .banner .nav a { color: #ffdfcb; font-size: 14px; font-weight: 600; text-decoration: none; }
+  .banner .nav a:hover { text-decoration: underline; }
   .banner .stats { margin-top: 16px; font-size: 13px; display: flex; flex-wrap: wrap;
                    gap: 7px 14px; justify-content: center; opacity: .95; }
   .banner .stats span { background: rgba(255,255,255,.16); border-radius: 999px; padding: 3px 12px; }
@@ -163,6 +167,14 @@
   <img class="portrait" src="portrait.jpeg" alt="Andy Burnham, illustration by Stanley Chow" width="148" height="197">
   <h1>Inside Andy's Brain</h1>
   <p class="tag">Search everything Andy Burnham has said and voted on: every Commons speech, question and division, ministerial speeches, mayoral statements and the documents behind his campaigns.</p>
+  <nav class="nav">
+    <a href="timeline.html">Career timeline</a>
+    <a href="briefings.html">Briefings</a>
+    <a href="loyalty.html">Voting loyalty</a>
+    <a href="in-the-news.html">In the news</a>
+    <a href="about.html">About</a>
+    <a href="feed.xml" title="RSS feed of new coverage">RSS</a>
+  </nav>
   <div class="stats" id="stats"></div>
 </div>
 
@@ -861,6 +873,24 @@ async function reconnect() {
     $("q").placeholder = "Ask anything: what has he announced as PM? what did he say about buses?";
     $("q").focus();
     // A shared or bookmarked link restores its search once the engine is up.
+    // #r=<vault path> is a permalink to one record: briefing pages and the
+    // timeline cite records this way, so every claim lands on its evidence.
+    const perma = new URLSearchParams(location.hash.slice(1)).get("r");
+    if (perma) {
+      const rows = await state.db.query(
+        `SELECT date, family, folder_family, voice, vote, title, path, url, alt_url,
+                substr(body, 1, 240) AS snip FROM records WHERE path = ?`, [perma]);
+      if (rows.length) {
+        $("status").innerHTML = "One record from the archive. " +
+          "<a href='./' style='color:#c0264b'>Search the whole archive</a>.";
+        const el = card(rows[0]);
+        $("results").appendChild(el);
+        el.querySelector(".expand").click();
+      } else {
+        $("status").textContent = "That record was not found; it may have been renamed. Try a search instead.";
+      }
+      return;
+    }
     if (applyHash()) search(true);
   } catch (e) {
     showError("The search engine could not start: " + (e && e.message ? e.message : e) +

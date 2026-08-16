@@ -3,60 +3,84 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>About — Inside Andy's Brain</title>
-<meta name="description" content="What this site is, who built it, where the data comes from and the licences it is published under.">
+<title>About and methodology — Inside Andy's Brain</title>
+<meta name="description" content="What is in this archive of Andy Burnham's public record, what is not, where it comes from and how it updates.">
 <link rel="icon" type="image/png" href="favicon.png">
 <style>
   :root { --ink:#1f2337; --muted:#6d7183; --paper:#fdf6f3; --card:#ffffff; --line:#f2dcd3;
-          --grad:linear-gradient(120deg,#e31241 0%,#e31241 55%,#e31241 100%); }
+          --grad:linear-gradient(120deg,#e31241 0%,#e31241 55%,#e31241 100%); --accent:#334155; }
   * { box-sizing:border-box; }
   body { margin:0; background:var(--paper); color:var(--ink);
-         font:16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+         font:16px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
   .banner { background:var(--grad); color:#fff; padding:30px 20px; text-align:center; }
-  .banner h1 { margin:0; font-size:26px; }
-  .banner a { color:#ffe9c9; font-size:13.5px; text-decoration:none; }
-  .wrap { max-width:720px; margin:0 auto; padding:28px 20px 80px; }
-  h2 { font-size:19px; margin:28px 0 8px; }
+  .banner h1 { margin:0; font-size:27px; }
+  .banner a { color:#ffdfcb; font-size:13.5px; text-decoration:none; }
+  .banner p.tag { margin:8px auto 0; font-size:14.5px; max-width:640px; opacity:.95; }
+  .nav { margin-top:10px; display:flex; flex-wrap:wrap; gap:4px 16px; justify-content:center; }
+  .nav a { font-weight:600; font-size:13.5px; }
+  .wrap { max-width:760px; margin:0 auto; padding:26px 20px 80px; }
+  h2 { font-size:20px; margin:32px 0 8px; color:var(--accent); }
   p, li { font-size:15.5px; color:#33383f; }
   a { color:#c0264b; }
-  .card { background:var(--card); border:0.5px solid var(--line); border-radius:12px; padding:14px 18px; margin:14px 0; }
-  footer { margin-top:40px; color:var(--muted); font-size:12.5px; border-top:1px solid var(--line); padding-top:14px; text-align:center; }
+  table { border-collapse:collapse; margin:14px 0; width:100%; font-size:14.5px; }
+  th, td { text-align:left; border-bottom:1px solid var(--line); padding:7px 10px 7px 0; vertical-align:top; }
+  th { color:var(--muted); font-size:13px; }
+  footer { margin-top:40px; color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
+           padding-top:14px; text-align:center; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#ece9e4; --muted:#a4a9bd; --paper:#14172a; --card:#1f2337; --line:#343a52; }
+    p, li { color:#c6c9cd; }
+  }
 </style>
 </head>
 <body>
 <div class="banner">
-  <h1>About this site</h1>
-  <a href="./">← Back to the search</a>
+  <h1>About this archive</h1>
+  <p class="tag">What is in it, what is not, where it comes from and how it updates.</p>
+  <nav class="nav">
+    <a href="./">← Search</a>
+    <a href="timeline.html">Career timeline</a>
+    <a href="briefings.html">Briefings</a>
+    <a href="loyalty.html">Voting loyalty</a>
+    <a href="in-the-news.html">In the news</a>
+  </nav>
 </div>
 <div class="wrap">
 
-  <p>Inside Andy's Brain is a searchable archive of the public record of Andy Burnham: every House of Commons speech, question and division vote from his years as MP for Leigh (2001 to 2017), his ministerial speeches, his statements as Mayor of Greater Manchester (2017 to 2026), records of his June 2026 return to the Commons as MP for Makerfield, his 2026 Labour leadership campaign, and full-text extracts of the government reports behind his major campaigns.</p>
+<h2>What this is</h2>
+<p>A structured archive of Andy Burnham's record in public life, built entirely from public sources, searchable in the browser. It covers his time as MP for Leigh (2001 to 2017), as a minister and Secretary of State (2005 to 2010), as a Labour leadership candidate (2010, 2015 and 2026), as Mayor of Greater Manchester (2017 to 2026) and as Prime Minister (from July 2026). Every record carries provenance: what it is, where it came from, and a link to the original.</p>
 
-  <div class="card">
-    <p>This site was built by Tom Watson as part of a coding training project, working with Claude, Anthropic's AI assistant, which wrote the code under his direction. It is an independent, unofficial archive. It is not affiliated with, or endorsed by, Andy Burnham or the Labour Party.</p>
-  </div>
+<h2>Sources</h2>
+<table>
+<thead><tr><th>Material</th><th>Source</th><th>Terms</th></tr></thead>
+<tbody>
+<tr><td>Commons speeches, questions, debates (2001–2017)</td><td>Hansard, via the TheyWorkForYou API</td><td>Parliamentary material, Open Parliament Licence</td></tr>
+<tr><td>Division votes (2001–2017)</td><td>Public Whip</td><td>Open data</td></tr>
+<tr><td>Ministerial speeches and government output</td><td>gov.uk and the UK Government Web Archive</td><td>Open Government Licence</td></tr>
+<tr><td>Mayoral statements, press releases, governance minutes</td><td>Greater Manchester Combined Authority</td><td>Public record</td></tr>
+<tr><td>Committee evidence</td><td>Parliament Committees API</td><td>Parliamentary material</td></tr>
+<tr><td>Press coverage</td><td>Guardian Open Platform API (full text under its terms); other outlets as curated summary-and-link records only</td><td>Copyright respected: summaries and links, never article text</td></tr>
+<tr><td>Reports and white papers</td><td>Official PDFs (Hillsborough Independent Panel, Francis reports, National Care Service white paper and others), text-extracted</td><td>Public documents</td></tr>
+<tr><td>His social media output</td><td>Public Instagram posts</td><td>Summary records of his own public statements</td></tr>
+</tbody>
+</table>
 
-  <h2>Where the information comes from</h2>
-  <p>Everything here is drawn from publicly available sources, and every search result links back to the original record so you can check it for yourself. Nothing is quoted without a source.</p>
+<h2>Rules the archive keeps</h2>
+<p>Public sources only. Every record carries provenance and links to its original. Press records are summaries with links, not article text, except Guardian material which arrives in full through the Guardian's own API under its terms; quotations are short extracts with attribution. Records in his own voice are marked as such and distinguished from contextual coverage. Nothing after 19 June 2026 is attributed to him as mayor. Where the archive cannot support a claim, its briefing pages say so rather than fill the gap.</p>
 
-  <h2>Sources and licences</h2>
-  <ul>
-    <li>Parliamentary speeches, questions and debates: Hansard, retrieved via <a href="https://www.theyworkforyou.com">TheyWorkForYou</a>. Contains Parliamentary information licensed under the <a href="https://www.parliament.uk/site-information/copyright-parliament/open-parliament-licence/">Open Parliament Licence v3.0</a>.</li>
-    <li>Division votes: <a href="https://www.publicwhip.org.uk">The Public Whip</a>, an open-source, not-for-profit project. Vote counts are computed from its published data; each record links to the official division page.</li>
-    <li>Ministerial speeches and government publications: <a href="https://www.gov.uk">gov.uk</a> and the UK Government Web Archive at The National Archives. Contains public sector information licensed under the <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">Open Government Licence v3.0</a>.</li>
-    <li>Mayoral statements: Greater Manchester Combined Authority press releases, 2017 to 19 June 2026, when his mayoralty ended.</li>
-    <li>Press coverage: Guardian records carry full text through the Guardian's Open Platform API under its terms. Every other outlet, including the BBC, the Manchester Evening News, LabourList, the Independent, Al Jazeera, PoliticsHome, Channel 4 News and ITV News, appears for copyright reasons as a short summary with a link to the publisher; no article text is reproduced.</li>
-    <li>Guardian coverage: headlines, standfirsts and links retrieved via the Guardian's <a href="https://open-platform.theguardian.com">Open Platform</a> API, used with attribution. Article text remains on <a href="https://www.theguardian.com">theguardian.com</a>.</li>
-    <li>Campaign speeches: reproduced from full texts published by the press, with the source named on each record.</li>
-  </ul>
+<h2>What is not here</h2>
+<p>The archive currently holds no broadcast or podcast transcripts, which for a broadcast-heavy politician is the largest gap; no material before his election in June 2001; only thin coverage of the 2010 and 2015 leadership campaigns; sparse press coverage before the 2010s outside the Guardian; and limited third-party critique, since most families are first-party sources (Hansard, gov.uk, GMCA). Mayoral question time transcripts and scrutiny-committee records are also not yet ingested. These gaps are stated here so the archive is never mistaken for the whole record.</p>
 
-  <h2>What this site is not</h2>
-  <p>It is not a complete account of everything Andy Burnham has ever said. Notable gaps, marked openly in the archive, include broadcast interviews, podcast appearances and Mayor's Question Time transcripts. The search matches words in the records; it does not interpret opinions or positions.</p>
+<h2>How it updates</h2>
+<p>The archive refreshes daily, unattended: new Commons material when Parliament sits, new gov.uk and No 10 output, Guardian coverage via API, and a curated sweep of other outlets with dates verified on the article page before ingest. The front page shows the current snapshot date and record count. The <a href="feed.xml">RSS feed</a> carries each day's new coverage, the same material as the <a href="in-the-news.html">In the news</a> page.</p>
 
-  <h2 id="feedback">Corrections, gaps and feedback</h2>
-  <p>Spotted an error, a missing record or a search that should have worked but did not? That is exactly the feedback this project needs: use the <a href="feedback.html">feedback form</a> and your message goes straight to the site's maintainer. Corrections to the record, reports of gaps and notes on confusing search behaviour are all welcome. For the technically minded, the site and its history are public on <a href="https://github.com/keepaneyeout/inside-andys-brain/issues">GitHub</a>, where corrections can also be raised as issues. This is an archive of the public record rather than a place for political comment, so feedback about the site is more useful than feedback about its subject.</p>
+<h2>How to cite</h2>
+<p>Every search has a shareable address (the query and filters live in the URL), and every record has a permalink of the form <code>/#r=&lt;record path&gt;</code>, reachable from any citation link on the briefing pages. For the underlying primary document, follow the record's own source link. The archive is a finding aid; the authoritative text is always the original.</p>
 
-  <footer>Data snapshot: 9 July 2026. Refreshed regularly while the 2026 Labour leadership contest runs.</footer>
+<h2>Honest limits</h2>
+<p>Search is lexical, not semantic: it matches words (with stemming and a curated set of synonyms), so absence of results is not evidence of absence. The loyalty page uses Public Whip's party-majority measure, which cannot distinguish whipped votes from free votes, and says so. Briefing pages are narratives assembled from first-party records and mark where adversarial or independent material is missing.</p>
+
+<footer>Part of <a href="./">Inside Andy's Brain</a>, a public-record archive.</footer>
 </div>
 </body>
 </html>
