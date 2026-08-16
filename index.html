@@ -610,6 +610,7 @@ async function search(reset) {
     $("status").textContent = "";
     $("more").textContent = "Load more";
     const msg = String(e && e.message ? e.message : e);
+    window.__lastSearchError = msg;
     showError(/malformed|corrupt|404|Not Found|fetch/i.test(msg)
       ? "The site's data was updated while this page was open, so your browser is asking for pieces that have moved on. Refresh the page (Cmd+Shift+R, or Ctrl+F5 on Windows) and search again."
       : "Search failed: " + msg);
