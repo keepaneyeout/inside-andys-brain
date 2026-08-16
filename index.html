@@ -293,6 +293,7 @@ function renderBody(md) {
   return out.join("");
 }
 function showError(msg) { const e = $("err"); e.textContent = msg; e.style.display = "block"; }
+function hideError() { const e = $("err"); e.textContent = ""; e.style.display = "none"; }
 function updateMore(shown, total, exhausted) {
   // Speeches from one debate share a card, so the number of cards on screen is
   // not the number of matching records. The button hides when the records run
@@ -598,6 +599,7 @@ async function search(reset) {
       state.lastQuery = expr; state.lastNote = note;
     }
     const data = await collectPage(expr);
+    hideError();
     state.total = data.total;
     const shown = $("results").children.length;
     const interpreted = (data.note || note) ? ` (interpreted as: ${data.note || note})` : "";
@@ -707,7 +709,11 @@ async function connect() {
 }
 const BROKEN = /vtable|malformed|corrupt|disk image|404|Not Found|fetch/i;
 async function reconnect() {
-  try { await connect(); return true; } catch (e) { return false; }
+  for (let i = 0; i < 2; i++) {
+    try { await connect(); return true; } catch (e) { /* wait and try once more */ }
+    await new Promise(r => setTimeout(r, 400));
+  }
+  return false;
 }
 
 (async function boot() {
