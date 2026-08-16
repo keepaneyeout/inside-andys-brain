@@ -264,7 +264,7 @@ const STOPWORDS = new Set(("a an and are as at be but by did do does for from ha
 
 const $ = id => document.getElementById(id);
 const state = { offset: 0, rowsSeen: 0, limit: 20, total: 0, running: false,
-                db: null, autoFamily: false, groups: new Map(), lastNote: null };
+                db: null, autoFamily: false, groups: new Map(), buffer: [], lastNote: null };
 
 const EXAMPLES = [
   { label: "His first speech as PM", q: "first speech as Prime Minister" },
@@ -491,9 +491,11 @@ function card(r) {
 function groupKey(r) {
   return r.folder_family === "commons" ? (r.date || "") + "|" + (r.title || "") : null;
 }
-function addRows(rows) {
-  let added = 0;
-  for (const r of rows) {
+function addRows(rows, cap) {
+  let added = 0, i = 0;
+  for (; i < rows.length; i++) {
+    if (cap !== undefined && added >= cap) break;
+    const r = rows[i];
     const key = groupKey(r), g = key ? state.groups.get(key) : null;
     if (g) {
       g.n++;
@@ -511,21 +513,27 @@ function addRows(rows) {
     $("results").appendChild(el);
     added++;
   }
-  return added;
+  return { added, rest: rows.slice(i) };
 }
 // Grouping means a page of rows is not a page of cards, so rows are pulled in
-// blocks until enough new cards exist to fill the page or the results run out.
+// blocks and held in a buffer: enough are rendered to fill the page and the
+// remainder waits for the next click rather than being re-fetched or dropped.
 const FETCH = 150, FETCH_TRIES = 4;
 async function collectPage(expr) {
   let added = 0, total = state.total, note = null, tries = 0;
-  while (added < state.limit && tries++ < FETCH_TRIES) {
-    const d = await doQuery(expr, FETCH, state.rowsSeen);
-    total = d.total;
-    if (d.searched) note = d.searched;
-    if (!d.rows.length) break;
-    state.rowsSeen += d.rows.length;
-    added += addRows(d.rows);
-    if (state.rowsSeen >= total) break;
+  while (added < state.limit) {
+    if (!state.buffer.length) {
+      if (tries++ >= FETCH_TRIES || (state.rowsSeen && state.rowsSeen >= total)) break;
+      const d = await doQuery(expr, FETCH, state.rowsSeen);
+      total = d.total;
+      if (d.searched) note = d.searched;
+      if (!d.rows.length) break;
+      state.rowsSeen += d.rows.length;
+      state.buffer = d.rows;
+    }
+    const got = addRows(state.buffer, state.limit - added);
+    state.buffer = got.rest;
+    added += got.added;
   }
   return { total, note };
 }
@@ -537,7 +545,7 @@ async function search(reset) {
   $("more").disabled = true;
   if (!reset) $("more").textContent = "Loading more…";
   if (reset) {
-    state.offset = 0; state.rowsSeen = 0; state.groups = new Map();
+    state.offset = 0; state.rowsSeen = 0; state.groups = new Map(); state.buffer = [];
     state.lastQuery = null; $("results").innerHTML = ""; $("more").hidden = true;
   }
   $("status").textContent = "Rummaging through the brain…";
@@ -593,7 +601,7 @@ async function search(reset) {
     $("status").textContent = data.total
       ? `${data.total.toLocaleString("en-GB")} record${data.total === 1 ? "" : "s"} match ${q}${interpreted}, showing ${shown} result${shown === 1 ? "" : "s"}`
       : `No results for ${q}. Try key words only, a prefix* or different filters.`;
-    updateMore(shown, data.total, state.rowsSeen >= data.total);
+    updateMore(shown, data.total, state.rowsSeen >= data.total && !state.buffer.length);
     state.offset = shown;
   } catch (e) {
     $("status").textContent = "";
