@@ -280,17 +280,40 @@ const createDbWorker = httpvfsModule.createDbWorker
   || httpvfsModule;
 
 const STATS = {"total": 15083, "families": [{"family": "question", "count": 4870}, {"family": "division", "count": 4227}, {"family": "debate", "count": 2756}, {"family": "press", "count": 2362}, {"family": "statement", "count": 669}, {"family": "minutes", "count": 63}, {"family": "social", "count": 63}, {"family": "hillsborough", "count": 19}, {"family": "petition", "count": 18}, {"family": "pdf-extract", "count": 12}, {"family": "campaign", "count": 7}, {"family": "evidence", "count": 7}, {"family": "pdf-extract-index", "count": 6}, {"family": "speech", "count": 4}], "from": "2001-06-08", "to": "2026-09-06"};
-const DB_CONFIG = {
-  from: "inline",
-  config: {
-    serverMode: "chunked",
-    requestChunkSize: 4096,
-    databaseLengthBytes: 62922752,
-    serverChunkSize: 9437184,
-    urlPrefix: "index-bc0824e7.sqlite.",
-    suffixLength: 3
-  }
-};
+// Two databases since 6 September 2026. "current" holds records dated from
+// 1 January 2026 and changes every day; "archive" holds everything earlier
+// and changes rarely, so the daily publish is a few megabytes rather than the
+// whole corpus. The worker opens current as main and the page attaches
+// archive; every query runs against both schemas with UNION ALL. If the
+// archive cannot be attached the site still works on current records and
+// says so.
+const DBS = {"chunk": 9437184, "requestChunkSize": 4096, "current": {"prefix": "current-a2db57dc.sqlite.", "bytes": 4939776}, "archive": {"prefix": "archive-745e9f64.sqlite.", "bytes": 58089472}};
+function dbConfig(name) {
+  return {
+    from: "inline",
+    virtualFilename: name + ".sqlite",
+    config: {
+      serverMode: "chunked",
+      requestChunkSize: DBS.requestChunkSize,
+      databaseLengthBytes: DBS[name].bytes,
+      serverChunkSize: DBS.chunk,
+      urlPrefix: DBS[name].prefix,
+      suffixLength: 3
+    }
+  };
+}
+// Query helpers. A template names its tables §.records_fts and §.records;
+// union() expands it once per attached schema, and dup() repeats the bound
+// arguments to match. Inside each branch the bare name records_fts resolves
+// to that branch's table, so MATCH, bm25 and snippet work unchanged.
+let SCHEMAS = ["main"];
+const union = tpl => SCHEMAS.map(s => tpl.split("§.").join(s + ".")).join(" UNION ALL ");
+const dup = args => [].concat(...SCHEMAS.map(() => args));
+const JOIN = "§.records_fts JOIN §.records r ON r.id = records_fts.rowid";
+function countSql(where) {
+  return "SELECT " + SCHEMAS.map(s =>
+    `(SELECT COUNT(*) FROM ${JOIN.split("§.").join(s + ".")} WHERE ${where})`).join(" + ") + " AS n";
+}
 const STOPWORDS = new Set(("a an and are as at be but by did do does for from had has have he her him his how i in " +
   "into is it its me my not of on or our she so that the their them they this to was we were what when where which " +
   "who why will with you your andy burnham about said say says saying talk talked talking tell told mention " +
@@ -365,8 +388,7 @@ function buildWhere() {
 async function countFor(matchExpr, where, args) {
   const a = args.slice(); a[0] = matchExpr;
   try {
-    const r = await state.db.query(
-      `SELECT COUNT(*) AS n FROM records_fts JOIN records r ON r.id = records_fts.rowid WHERE ${where}`, a);
+    const r = await state.db.query(countSql(where), dup(a));
     return r[0] ? r[0].n : 0;
   } catch (e) { return 0; }
 }
@@ -403,28 +425,34 @@ async function expandTokens(tokens, where, args) {
 const TITLE_CLAWBACK = `(CASE WHEN r.folder_family IN ('commons', 'votes')
       THEN (bm25(records_fts, 0.0, 1.0) - bm25(records_fts, 10.0, 1.0)) * 0.35
       ELSE 0 END)`;
-const ORDERINGS = {
-  best: `bm25(records_fts, 10.0, 1.0)
+// The score is computed inside each schema's branch, because bm25 and the
+// other FTS functions only exist there; the union is then sorted on the
+// plain columns score, date and rank.
+const SCORE = `bm25(records_fts, 10.0, 1.0)
     - COALESCE(julianday(r.date) - julianday('2001-01-01'), 0) * 0.0005
     + (CASE WHEN r.family = 'question' THEN 1.5 ELSE 0 END)
     - (CASE WHEN r.voice = 'direct' THEN 0.8 ELSE 0 END)
-    + ${TITLE_CLAWBACK}`,
-  newest: "r.date DESC, bm25(records_fts)",
-  oldest: "r.date ASC, bm25(records_fts)"
+    + ${TITLE_CLAWBACK}`;
+const ORDERINGS = {
+  best: "score",
+  newest: "date DESC, rank",
+  oldest: "date ASC, rank"
 };
 async function runSearch(matchExpr, where, args, limit, offset) {
   const a = args.slice(); a[0] = matchExpr;
   const order = ORDERINGS[$("sort").value] || ORDERINGS.best;
-  const countRows = await state.db.query(
-    `SELECT COUNT(*) AS n FROM records_fts JOIN records r ON r.id = records_fts.rowid WHERE ${where}`, a);
+  const countRows = await state.db.query(countSql(where), dup(a));
   const total = countRows[0] ? countRows[0].n : 0;
   let rows = [];
   if (total > 0) {
+    const branch =
+      `SELECT r.date AS date, r.family, r.folder_family, r.voice, r.vote, r.title, r.path, r.url, r.alt_url,
+              snippet(records_fts, 1, '[[[', ']]]', ' ... ', 16) AS snip,
+              bm25(records_fts) AS rank, ${SCORE} AS score
+       FROM ${JOIN} WHERE ${where}`;
     rows = await state.db.query(
-      `SELECT r.date, r.family, r.folder_family, r.voice, r.vote, r.title, r.path, r.url, r.alt_url,
-              snippet(records_fts, 1, '[[[', ']]]', ' ... ', 16) AS snip
-       FROM records_fts JOIN records r ON r.id = records_fts.rowid
-       WHERE ${where} ORDER BY ${order} LIMIT ? OFFSET ?`, a.concat([limit, offset]));
+      `SELECT * FROM (${union(branch)}) ORDER BY ${order} LIMIT ? OFFSET ?`,
+      dup(a).concat([limit, offset]));
   }
   return { total, rows };
 }
@@ -529,7 +557,8 @@ function card(r) {
     if (!full.dataset.loaded) {
       full.innerHTML = "<p>Loading…</p>"; full.hidden = false;
       try {
-        const rec = await state.db.query("SELECT body, path FROM records WHERE path = ?", [r.path]);
+        const rec = await state.db.query(
+          union("SELECT body, path FROM §.records WHERE path = ?") + " LIMIT 1", dup([r.path]));
         full.innerHTML = rec[0]
           ? renderBody(rec[0].body) + `<p class="prov">Vault record: ${esc(rec[0].path)}</p>`
           : "<p>Record not found.</p>";
@@ -648,12 +677,12 @@ async function loadAggregates(expr, total) {
     const { where, args } = buildWhere();
     const a = args.slice(); a[0] = expr;
     const years = await state.db.query(
-      `SELECT r.year y, COUNT(*) n FROM records_fts JOIN records r ON r.id = records_fts.rowid
-       WHERE ${where} AND r.year IS NOT NULL GROUP BY r.year ORDER BY r.year`, a);
+      `SELECT y, SUM(n) AS n FROM (${union(`SELECT r.year AS y, COUNT(*) AS n FROM ${JOIN}
+       WHERE ${where} AND r.year IS NOT NULL GROUP BY r.year`)}) GROUP BY y ORDER BY y`, dup(a));
     if (token !== state.aggToken || !years.length) return;
     const fams = await state.db.query(
-      `SELECT r.family f, COUNT(*) n FROM records_fts JOIN records r ON r.id = records_fts.rowid
-       WHERE ${where} AND r.family IS NOT NULL GROUP BY r.family ORDER BY n DESC`, a);
+      `SELECT f, SUM(n) AS n FROM (${union(`SELECT r.family AS f, COUNT(*) AS n FROM ${JOIN}
+       WHERE ${where} AND r.family IS NOT NULL GROUP BY r.family`)}) GROUP BY f ORDER BY n DESC`, dup(a));
     if (token !== state.aggToken) return;
     const lo = years[0].y, hi = years[years.length - 1].y;
     const byYear = new Map(years.map(r => [r.y, r.n]));
@@ -753,9 +782,9 @@ async function search(reset) {
     state.total = data.total;
     const shown = $("results").children.length;
     const interpreted = (data.note || note) ? ` (interpreted as: ${data.note || note})` : "";
-    $("status").textContent = data.total
+    $("status").textContent = (data.total
       ? `${data.total.toLocaleString("en-GB")} record${data.total === 1 ? "" : "s"} match ${q}${interpreted}, showing ${shown} result${shown === 1 ? "" : "s"}`
-      : `No results for ${q}. Try key words only, a prefix* or different filters.`;
+      : `No results for ${q}. Try key words only, a prefix* or different filters.`) + (state.archiveNote || "");
     updateMore(shown, data.total, state.rowsSeen >= data.total && !state.buffer.length);
     state.offset = shown;
     if (reset) { writeHash(); loadAggregates(expr, data.total); }
@@ -852,11 +881,26 @@ for (const ex of EXAMPLES) {
 // Nothing is wrong with the data, so the cure is to build a fresh connection
 // and try once more rather than asking the reader to refresh the page.
 async function connect() {
-  const worker = await createDbWorker([DB_CONFIG],
+  // Both databases are registered as lazily fetched files; the first config
+  // is opened as main and the archive is attached by name. The worker keeps
+  // the main database's page cache off so every read goes through its own
+  // chunk cache, and the attached database is set the same way.
+  const worker = await createDbWorker([dbConfig("current"), dbConfig("archive")],
     new URL("./sqlite.worker.js", import.meta.url).toString(),
     new URL("./sql-wasm.wasm", import.meta.url).toString());
   state.db = worker.db;
   await state.db.query("SELECT 1");
+  SCHEMAS = ["main"];
+  try {
+    await state.db.exec("ATTACH DATABASE 'archive.sqlite' AS archive");
+    await state.db.exec("PRAGMA archive.cache_size=0");
+    await state.db.query("SELECT COUNT(*) AS n FROM archive.records WHERE id = 1");
+    SCHEMAS = ["main", "archive"];
+    state.archiveNote = "";
+  } catch (e) {
+    state.archiveNote = " Records before 2026 are temporarily unavailable; refresh to try again.";
+    window.__archiveError = String(e && e.message ? e.message : e);
+  }
 }
 const BROKEN = /vtable|malformed|corrupt|disk image|404|Not Found|fetch/i;
 async function reconnect() {
@@ -879,8 +923,8 @@ async function reconnect() {
     const perma = new URLSearchParams(location.hash.slice(1)).get("r");
     if (perma) {
       const rows = await state.db.query(
-        `SELECT date, family, folder_family, voice, vote, title, path, url, alt_url,
-                substr(body, 1, 240) AS snip FROM records WHERE path = ?`, [perma]);
+        union(`SELECT date, family, folder_family, voice, vote, title, path, url, alt_url,
+                substr(body, 1, 240) AS snip FROM §.records WHERE path = ?`) + " LIMIT 1", dup([perma]));
       if (rows.length) {
         $("status").innerHTML = "One record from the archive. " +
           "<a href='./' style='color:#c0264b'>Search the whole archive</a>.";

@@ -6,6 +6,6 @@ A searchable public record of Andy Burnham: every House of Commons speech, quest
 
 15,083 records, 2001 to 2026, public sources only: Hansard via TheyWorkForYou, Public Whip division data, gov.uk and the UK Government Web Archive, Greater Manchester Combined Authority press and governance minutes, the Parliament Committees API, his public Instagram output, and extracted official reports. Every record links to its source. Press records are summary and link only for copyright reasons; Guardian coverage comes through the Guardian's Open Platform API under its terms.
 
-The search runs entirely in your browser. The site is static: the database ships as fingerprinted split chunks (`index-<hash>.sqlite.NNN`) and the page fetches only the few kilobytes each query needs, using sql.js-httpvfs.
+The search runs entirely in your browser. The site is static: the data ships as two fingerprinted SQLite databases split into chunks, `current-<hash>.sqlite.NNN` for records dated from 2026 and `archive-<hash>.sqlite.NNN` for everything earlier, and the page fetches only the few kilobytes each query needs, using sql.js-httpvfs. Only the current database changes from day to day.
 
 Built from a structured public-record vault. Data snapshot: 6 September 2026.
