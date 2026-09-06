@@ -286,8 +286,10 @@ const STATS = {"total": 15083, "families": [{"family": "question", "count": 4870
 // whole corpus. The worker opens current as main and the page attaches
 // archive; every query runs against both schemas with UNION ALL. If the
 // archive cannot be attached the site still works on current records and
-// says so.
-const DBS = {"chunk": 9437184, "requestChunkSize": 4096, "current": {"prefix": "current-a2db57dc.sqlite.", "bytes": 4939776}, "archive": {"prefix": "archive-745e9f64.sqlite.", "bytes": 58089472}};
+// says so. Chunk files carry a .xz extension because GitHub Pages gzips
+// unknown binary types and then serves byte ranges of the compressed stream,
+// which corrupted reads; see scripts/build_webapp.py.
+const DBS = {"chunk": 9437184, "requestChunkSize": 4096, "suffix": ".xz", "current": {"prefix": "current-6302498e.sqlite.", "bytes": 4939776}, "archive": {"prefix": "archive-741c709d.sqlite.", "bytes": 58089472}};
 function dbConfig(name) {
   return {
     from: "inline",
@@ -298,6 +300,7 @@ function dbConfig(name) {
       databaseLengthBytes: DBS[name].bytes,
       serverChunkSize: DBS.chunk,
       urlPrefix: DBS[name].prefix,
+      urlSuffix: DBS.suffix || "",
       suffixLength: 3
     }
   };
