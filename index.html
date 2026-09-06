@@ -897,8 +897,8 @@ async function connect() {
   // the main database's page cache off so every read goes through its own
   // chunk cache, and the attached database is set the same way.
   const worker = await createDbWorker([dbConfig("current"), dbConfig("archive")],
-    new URL("./sqlite.worker.js?v=20260906", import.meta.url).toString(),
-    new URL("./sql-wasm.wasm", import.meta.url).toString());
+    new URL("./sqlite.worker.js?v=0a420e82ec88", import.meta.url).toString(),
+    new URL("./sql-wasm.wasm?v=f71cee54ad1d", import.meta.url).toString());
   state.db = worker.db;
   await state.db.query("SELECT 1");
   SCHEMAS = ["main"];
