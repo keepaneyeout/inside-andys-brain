@@ -390,7 +390,10 @@ async function countFor(matchExpr, where, args) {
   try {
     const r = await state.db.query(countSql(where), dup(a));
     return r[0] ? r[0].n : 0;
-  } catch (e) { return 0; }
+  } catch (e) {
+    if (BROKEN.test(String(e && e.message ? e.message : e))) throw e;
+    return 0;  // an FTS syntax error means "no matches for that expression"
+  }
 }
 async function expandTokens(tokens, where, args) {
   // Crack unknown compounds: "foxhunting" has no matches, but fox+hunting
@@ -509,6 +512,11 @@ async function doQuery(q, limit, offset) {
   try {
     res = await runSearch(q, where, args, limit, offset);
   } catch (e) {
+    // Only an FTS syntax error is retried as a quoted phrase. A failed read
+    // over the network must reach search(), which rebuilds the connection;
+    // treating it as a syntax error once turned "Hillsborough disclosure"
+    // into a hunt for "hills borough dis closure".
+    if (BROKEN.test(String(e && e.message ? e.message : e))) throw e;
     searched = '"' + q.replace(/"/g, '""') + '"';
     res = await runSearch(searched, where, args, limit, offset);
   }
@@ -886,7 +894,7 @@ async function connect() {
   // the main database's page cache off so every read goes through its own
   // chunk cache, and the attached database is set the same way.
   const worker = await createDbWorker([dbConfig("current"), dbConfig("archive")],
-    new URL("./sqlite.worker.js", import.meta.url).toString(),
+    new URL("./sqlite.worker.js?v=20260906", import.meta.url).toString(),
     new URL("./sql-wasm.wasm", import.meta.url).toString());
   state.db = worker.db;
   await state.db.query("SELECT 1");
@@ -902,7 +910,7 @@ async function connect() {
     window.__archiveError = String(e && e.message ? e.message : e);
   }
 }
-const BROKEN = /vtable|malformed|corrupt|disk image|404|Not Found|fetch/i;
+const BROKEN = /vtable|malformed|corrupt|disk image|doXHR|Couldn't load|404|Not Found|fetch/i;
 async function reconnect() {
   for (let i = 0; i < 2; i++) {
     try { await connect(); return true; } catch (e) { /* wait and try once more */ }
