@@ -279,7 +279,7 @@ const createDbWorker = httpvfsModule.createDbWorker
   || (httpvfsModule.default && httpvfsModule.default.createDbWorker)
   || httpvfsModule;
 
-const STATS = {"total": 15355, "families": [{"family": "question", "count": 4870}, {"family": "division", "count": 4270}, {"family": "debate", "count": 2781}, {"family": "press", "count": 2535}, {"family": "statement", "count": 700}, {"family": "minutes", "count": 63}, {"family": "social", "count": 63}, {"family": "hillsborough", "count": 19}, {"family": "petition", "count": 18}, {"family": "pdf-extract", "count": 12}, {"family": "campaign", "count": 7}, {"family": "evidence", "count": 7}, {"family": "pdf-extract-index", "count": 6}, {"family": "speech", "count": 4}], "from": "2001-06-08", "to": "2026-09-25"};
+const STATS = {"total": 15365, "families": [{"family": "question", "count": 4870}, {"family": "division", "count": 4270}, {"family": "debate", "count": 2781}, {"family": "press", "count": 2545}, {"family": "statement", "count": 700}, {"family": "minutes", "count": 63}, {"family": "social", "count": 63}, {"family": "hillsborough", "count": 19}, {"family": "petition", "count": 18}, {"family": "pdf-extract", "count": 12}, {"family": "campaign", "count": 7}, {"family": "evidence", "count": 7}, {"family": "pdf-extract-index", "count": 6}, {"family": "speech", "count": 4}], "from": "2001-06-08", "to": "2026-09-25"};
 // Two databases since 6 September 2026. "current" holds records dated from
 // 1 January 2026 and changes every day; "archive" holds everything earlier
 // and changes rarely, so the daily publish is a few megabytes rather than the
@@ -289,7 +289,7 @@ const STATS = {"total": 15355, "families": [{"family": "question", "count": 4870
 // says so. Chunk files carry a .xz extension because GitHub Pages gzips
 // unknown binary types and then serves byte ranges of the compressed stream,
 // which corrupted reads; see scripts/build_webapp.py.
-const DBS = {"chunk": 9437184, "requestChunkSize": 4096, "suffix": ".xz", "current": {"prefix": "current-883184bd.sqlite.", "bytes": 6242304}, "archive": {"prefix": "archive-8835ffa2.sqlite.", "bytes": 58171392}};
+const DBS = {"chunk": 9437184, "requestChunkSize": 4096, "suffix": ".xz", "current": {"prefix": "current-84b2ff33.sqlite.", "bytes": 6283264}, "archive": {"prefix": "archive-8db68b52.sqlite.", "bytes": 58228736}};
 function dbConfig(name) {
   return {
     from: "inline",
