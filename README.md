@@ -8,4 +8,4 @@ A searchable public record of Andy Burnham: every House of Commons speech, quest
 
 The search runs entirely in your browser. The site is static: the data ships as two fingerprinted SQLite databases split into chunks, `current-<hash>.sqlite.NNN.xz` for records dated from 2026 and `archive-<hash>.sqlite.NNN.xz` for everything earlier, and the page fetches only the few kilobytes each query needs, using sql.js-httpvfs. Only the current database changes from day to day. The chunks are raw SQLite bytes, not xz archives: the extension stops GitHub Pages gzipping them, which broke byte-range reads.
 
-Built from a structured public-record vault. Data snapshot: 24 October 2026.
+Built from a structured public-record vault. Data snapshot: 25 October 2026.
